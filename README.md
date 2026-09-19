@@ -87,6 +87,5 @@ This mirrors the **SiL (Software-in-the-Loop)** replay approach used in industry
 
 ## Author
 
-**Steve Fredy Meka** — B.Eng. Technische Informatik
-Focus: test & validation of sensor and perception systems
+**Steve Meka** — B.Eng. Technische Informatik
 [stevkmef.com](https://stevkmef.com)
