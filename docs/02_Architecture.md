@@ -1,6 +1,6 @@
 # System Architecture
 
-**Project:** Camera–Radar Fusion for Obstacle Detection — SiL Validation on nuScenes
+**Project:** Camera–Radar Fusion for Obstacle Detection - SiL Validation on nuScenes
 **Author:** Steve Fredy Meka
 **Version:** 0.1 (Draft)
 **Date:** [enter date]
