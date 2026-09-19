@@ -1,10 +1,4 @@
 # Detailed Design
-
-**Project:** Camera–Radar Fusion for Obstacle Detection — SiL Validation on nuScenes
-**Author:** Steve Fredy Meka
-**Version:** 0.1 (Draft)
-**Date:** [enter date]
-
 ---
 
 ## 1. Purpose
@@ -160,8 +154,7 @@ ObstacleList "1" *-- "many" DetectedObject
 @enduml
 ```
 
-> The diagram above is written in PlantUML. It can be rendered at
-> plantuml.com or with a PlantUML plugin, and exported as an image later.
+![Class diagram of the data structures](class-diagram.png)
 
 ---
 
