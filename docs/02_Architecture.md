@@ -11,9 +11,9 @@
 
 The architecture is split into two clearly separated parts:
 
-- **System Under Test (SUT):** the perception system itself — it turns raw sensor
+- **System Under Test (SUT):** the perception system itself : it turns raw sensor
   data into a structured obstacle list.
-- **Test Harness:** the validation environment — it compares the SUT output against
+- **Test Harness:** the validation environment : it compares the SUT output against
   ground truth and computes metrics. It is **not** part of the embedded system; it
   is a development/validation tool.
 
