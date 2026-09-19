@@ -52,7 +52,16 @@ vehicle, while validation runs offline against annotated data.
    └───────────────────────────────────────────────────────────────┘
 ```
 
+## Modeled in Capella (Arcadia / MBSE)
+
+![Logical architecture of the perception system and test harness](architecture.png)
+
+*Modeled in Capella (Arcadia / MBSE). The diagram shows the two separate parts:
+the **Perception System** (System Under Test) and the **Test Harness** (validation),
+with the component exchanges between blocks.*
+
 ---
+
 
 ## 3. Components
 
