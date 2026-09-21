@@ -1,4 +1,4 @@
-# Fusion – Detailed Design
+# Fusion - Detailed Design
 ---
 
 ## 1. Why this component has a dedicated design document
@@ -6,7 +6,7 @@
 Most blocks in this system are simple input→output transformations and are
 documented by their code docstrings. The **Fusion** block is different: it
 contains real decision logic (data association, matching threshold, merge rules).
-Such logic deserves an explicit, visible design — not only code.
+Such logic deserves an explicit, visible design - not only code.
 
 ---
 
@@ -70,46 +70,7 @@ Nothing is dropped: fusion improves the result, it does not discard information.
 
 ## 6. Algorithm (flowchart)
 
-```plantuml
-@startuml
-start
-:Receive camera detections,
-radar detections, timestamp;
-:fused = empty list;
-:used_radar = empty set;
 
-while (more camera detections?) is (yes)
-  :take next camera detection "cam";
-  :search closest radar detection
-   within distance threshold
-   (not already used);
-  if (radar match found?) then (yes)
-    :merge (class from camera,
-     position/velocity from radar);
-    :mark that radar as used;
-    :add merged object to fused;
-  else (no)
-    :add camera detection to fused;
-  endif
-endwhile (no)
-
-while (more radar detections?) is (yes)
-  :take next radar detection;
-  if (already used?) then (yes)
-    :skip;
-  else (no)
-    :add radar detection to fused
-     (class stays "unknown");
-  endif
-endwhile (no)
-
-:return ObstacleList(fused, timestamp);
-stop
-@enduml
-```
-
-> Rendered at plantuml.com or planttext.com; export as PNG and place under
-> `docs/images/` if you want the image in the README.
 
 ---
 
