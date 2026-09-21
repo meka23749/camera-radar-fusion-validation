@@ -100,10 +100,3 @@ gitGraph
    merge feature/validation
 ```
 
----
-
-## 5. Why this matters
-
-This workflow keeps `main` releasable at all times, makes each change reviewable
-and reversible, and ties every feature to its tests. It is the same process used
-in professional software teams, applied here to a personal engineering project.
