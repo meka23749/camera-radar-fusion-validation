@@ -1,11 +1,5 @@
 # Git Workflow
 
-**Project:** Camera–Radar Fusion for Obstacle Detection — SiL Validation on nuScenes
-**Author:** Steve Fredy Meka
-
-This project follows a feature-branch workflow with Pull Requests, mirroring how
-teams work in a professional environment.
-
 ---
 
 ## 1. Principles
