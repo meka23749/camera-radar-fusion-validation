@@ -70,7 +70,7 @@ Nothing is dropped: fusion improves the result, it does not discard information.
 
 ## 6. Algorithm (flowchart)
 
-
+![Logical architecture of the perception system and test harness](04_Fusion_Design.png)
 
 ---
 
