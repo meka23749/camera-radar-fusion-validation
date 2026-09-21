@@ -8,13 +8,8 @@ detections from either sensor are kept as-is.
 This is a simple first version: association uses a fixed distance threshold.
 """
 
-import math
 from src.interfaces import DetectedObject, ObstacleList
-
-
-def _distance(a: DetectedObject, b: DetectedObject) -> float:
-    """Euclidean distance between two detections in the (x, y) plane."""
-    return math.hypot(a.x - b.x, a.y - b.y)
+from src.geometry import distance
 
 class Fusion:
     """Combines camera and radar detections into a single obstacle list."""
@@ -59,7 +54,7 @@ class Fusion:
             for j, rad in enumerate(radar_detections):
                 if j in used_radar_indices:
                     continue
-                d = _distance(cam, rad)
+                d = distance(cam, rad)
                 if d < best_distance:
                     best_distance = d
                     best_index = j
