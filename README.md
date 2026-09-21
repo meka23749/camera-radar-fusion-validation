@@ -1,4 +1,4 @@
-# Camera–Radar Fusion for Obstacle Detection - SiL Validation on nuScenes
+# Camera-Radar Fusion for Obstacle Detection - SiL Validation on nuScenes
 
 A camera–radar perception system that detects, classifies and localizes obstacles
 in front of the ego vehicle, validated as **Software-in-the-Loop (SiL)** against the
