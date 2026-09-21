@@ -100,8 +100,6 @@ gitGraph
    merge feature/validation
 ```
 
-> GitHub renders this Mermaid diagram automatically in the Markdown preview.
-
 ---
 
 ## 5. Why this matters
