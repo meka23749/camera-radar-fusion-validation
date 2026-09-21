@@ -1,11 +1,4 @@
 # Fusion – Detailed Design
-
-**Project:** Camera–Radar Fusion for Obstacle Detection — SiL Validation on nuScenes
-**Component:** Fusion (Sensor Fusion)
-**Author:** Steve Fredy Meka
-**Version:** 0.1 (Draft)
-**Date:** [enter date]
-
 ---
 
 ## 1. Why this component has a dedicated design document
