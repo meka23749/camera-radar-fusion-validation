@@ -1,5 +1,7 @@
 # Camera-Radar Fusion for Obstacle Detection - SiL Validation on nuScenes
 
+![Tests](https://github.com/meka23749/camera-radar-fusion-validation/actions/workflows/tests.yml/badge.svg)
+
 A camera–radar perception system that detects, classifies and localizes obstacles
 in front of the ego vehicle, validated as **Software-in-the-Loop (SiL)** against the
 annotated real-world **nuScenes** dataset.
