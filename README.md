@@ -74,8 +74,10 @@ This mirrors the **SiL (Software-in-the-Loop)** replay approach used in industry
 ## Documentation
 
 - [Requirements Specification](docs/01_Requirements.md)
-- System architecture — *coming soon*
-- Requirement ↔ test traceability matrix — *coming soon*
+- [System Architecture (Capella / MBSE)](docs/02_Architecture.md)
+- [Detailed Design](docs/03_Design.md)
+- [Fusion – Detailed Design](docs/04_Fusion_Design.md)
+- [Git Workflow](docs/05_Git_Workflow.md)
 
 ---
 
