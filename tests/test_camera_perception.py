@@ -1,6 +1,7 @@
 """Tests for Camera Perception (src/perception/camera_perception.py)."""
 
 import numpy as np
+import pytest
 from src.perception.camera_perception import CameraPerception
 from src.interfaces import CameraImage, DetectedObject
 
@@ -11,6 +12,7 @@ def _make_test_image(timestamp: float = 3.0) -> CameraImage:
     return CameraImage(pixels=pixels, timestamp=timestamp, camera_id="front")
 
 
+@pytest.mark.requirement("REQ-03")
 def test_detect_returns_a_list():
     """detect() returns a list of DetectedObject."""
     perception = CameraPerception()
@@ -20,6 +22,7 @@ def test_detect_returns_a_list():
     assert all(isinstance(obj, DetectedObject) for obj in result)
 
 
+@pytest.mark.requirement("REQ-12")
 def test_detections_carry_image_timestamp():
     """Detected objects keep the timestamp of the input image (synchronization)."""
     perception = CameraPerception()

@@ -1,9 +1,11 @@
 """Tests for Radar Processing (src/perception/radar_processing.py)."""
 
+import pytest
 from src.perception.radar_processing import RadarProcessing
 from src.interfaces import RadarPoint, RadarPoints, DetectedObject
 
 
+@pytest.mark.requirement("REQ-04")
 def test_each_point_becomes_a_detection():
     """Every radar point produces one DetectedObject."""
     radar = RadarPoints(
@@ -37,6 +39,7 @@ def test_class_is_unknown():
     assert obj.object_class == "unknown"
 
 
+@pytest.mark.requirement("REQ-12")
 def test_detections_carry_frame_timestamp():
     """Detections keep the timestamp of the radar frame (synchronization)."""
     radar = RadarPoints(points=[RadarPoint(x=5.0, y=0.0, velocity=0.0)], timestamp=9.0)

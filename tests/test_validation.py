@@ -1,5 +1,6 @@
 """Tests for Validation (src/test_harness/validation.py)."""
 
+import pytest
 from src.test_harness.validation import Validation, ValidationResult
 from src.interfaces import DetectedObject, ObstacleList, GroundTruthObject
 
@@ -28,6 +29,7 @@ def test_perfect_detection():
     assert result.precision == 1.0
 
 
+@pytest.mark.requirement("REQ-08")
 def test_missed_object_lowers_recall():
     """Two real objects, system detects only one: recall = 0.5."""
     detections = ObstacleList(objects=[_det(10.0, 0.0)], timestamp=1.0)
@@ -39,6 +41,7 @@ def test_missed_object_lowers_recall():
     assert result.precision == 1.0
 
 
+@pytest.mark.requirement("REQ-09")
 def test_invented_object_lowers_precision():
     """One real object, system reports two: one is a false positive."""
     detections = ObstacleList(

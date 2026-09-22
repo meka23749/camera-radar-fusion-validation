@@ -1,5 +1,6 @@
 """Tests for Output (src/perception/output.py)."""
 
+import pytest
 from src.perception.output import Output
 from src.interfaces import DetectedObject, ObstacleList
 
@@ -10,6 +11,7 @@ def _obj(confidence, t=1.0):
                           velocity=-5.0, confidence=confidence, timestamp=t)
 
 
+@pytest.mark.requirement("REQ-09")
 def test_low_confidence_objects_are_removed():
     """Detections below the threshold are filtered out."""
     obstacles = ObstacleList(
