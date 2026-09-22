@@ -1,5 +1,6 @@
 """Tests for Fusion (src/perception/fusion.py)."""
 
+import pytest
 from src.perception.fusion import Fusion
 from src.interfaces import DetectedObject, ObstacleList
 
@@ -16,6 +17,7 @@ def _rad(x, y, vel=-5.0, conf=0.5, t=1.0):
                           velocity=vel, confidence=conf, timestamp=t)
 
 
+@pytest.mark.requirement("REQ-05")
 def test_close_camera_and_radar_merge_into_one():
     """A camera and a radar detection at the same spot become ONE object."""
     camera = [_cam("car", x=14.0, y=1.0)]

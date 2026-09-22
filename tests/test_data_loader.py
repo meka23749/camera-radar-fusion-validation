@@ -19,6 +19,7 @@ def test_get_frame_returns_camera_and_radar():
     assert isinstance(radar, RadarPoints)
 
 
+@pytest.mark.requirement("REQ-12")
 def test_camera_and_radar_are_synchronized():
     """Camera and radar of the same frame share the same timestamp (REQ-12)."""
     loader = DataLoader(num_frames=5)
