@@ -5,6 +5,8 @@ from src.test_harness.validation import Validation, ValidationResult
 from src.interfaces import DetectedObject, ObstacleList, GroundTruthObject
 from src.test_harness.validation import aggregate
 
+VEHICLES = {"car", "truck"}
+
 
 def _det(x, y, t=1.0):
     """Helper: a system detection at (x, y)."""
@@ -107,3 +109,22 @@ def test_aggregate_is_micro_average():
     f2 = Validation().evaluate(ObstacleList([], 1.0),
                                [_gt(10.0, 0.0), _gt(20.0, 0.0), _gt(30.0, 0.0)])
     assert aggregate([f1, f2]).recall == 0.25
+
+
+
+@pytest.mark.requirement("REQ-08")
+def test_req08_scope_only_counts_vehicles_closer_than_30m():
+    """REQ-08 is about vehicles < 30 m: the far car and the pedestrian are ignored."""
+    truth = [_gt(10.0, 0.0), _gt(50.0, 0.0),
+             GroundTruthObject("pedestrian", 5.0, 0.0, 0.0, 1.0)]
+    res = Validation().evaluate(ObstacleList([_det(10.0, 0.0)], 1.0), truth,
+                                classes=VEHICLES, max_range=30.0)
+    assert (res.true_positives, res.false_negatives, res.recall) == (1, 0, 1.0)
+
+
+def test_detection_of_out_of_scope_object_is_not_a_false_positive():
+    """Detecting the pedestrian is correct - it must not count against the vehicle scope."""
+    truth = [GroundTruthObject("pedestrian", 5.0, 0.0, 0.0, 1.0)]
+    ped = DetectedObject("pedestrian", 5.0, 0.0, 0.0, 0.9, 1.0)
+    res = Validation().evaluate(ObstacleList([ped], 1.0), truth, classes=VEHICLES, max_range=30.0)
+    assert res.false_positives == 0

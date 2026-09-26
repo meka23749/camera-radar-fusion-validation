@@ -8,6 +8,7 @@ and computes recall (REQ-08) and precision (REQ-09).
 from dataclasses import dataclass
 from src.interfaces import ObstacleList, GroundTruthObject
 from src.geometry import distance
+import math
 
 UNKNOWN = "unknown"
 
@@ -46,18 +47,28 @@ class Validation:
         self,
         detections: ObstacleList,
         ground_truth: list[GroundTruthObject],
+        classes: set[str] | None = None,
+        max_range: float | None = None,
     ) -> ValidationResult:
         """Compare detections to ground truth for one frame.
 
         Args:
             detections: the obstacles produced by the system.
             ground_truth: the true objects (annotations) for the frame.
-
-        Returns:
-            A ValidationResult with TP, FP, FN, recall and precision.
+            classes: if given, only ground-truth objects of these classes are evaluated.
+            max_range: if given, only ground-truth objects closer than this (m) are evaluated.
         """
-        matched_gt_indices = set()
+        def in_scope(obj) -> bool:
+            if classes is not None and obj.object_class not in classes:
+                return False
+            return max_range is None or math.hypot(obj.x, obj.y) < max_range
+
+        scoped_gt = [g for g in ground_truth if in_scope(g)]
+        out_of_scope_gt = [g for g in ground_truth if not in_scope(g)]
+
+        matched_gt_indices: set[int] = set()
         true_positives = 0
+        false_positives = 0
 
         # Most confident detections claim ground truth first: the result
         # must not depend on the (meaningless) order of the input list.
@@ -65,7 +76,7 @@ class Validation:
             best_index = -1
             best_distance = self._distance_threshold
 
-            for i, gt in enumerate(ground_truth):
+            for i, gt in enumerate(scoped_gt):
                 if i in matched_gt_indices or not self._compatible(det, gt):
                     continue
                 d = distance(det, gt)
@@ -76,28 +87,20 @@ class Validation:
             if best_index >= 0:
                 true_positives += 1
                 matched_gt_indices.add(best_index)
+            elif self._is_false_positive(det, classes, max_range, out_of_scope_gt):
+                false_positives += 1
 
-        # False positives: detections that matched no ground-truth object
-        false_positives = len(detections.objects) - true_positives
-
-        # False negatives: ground-truth objects that were never matched
-        false_negatives = len(ground_truth) - len(matched_gt_indices)
-
-        # Metrics (guard against division by zero)
-        recall = (
-            true_positives / (true_positives + false_negatives)
-            if (true_positives + false_negatives) > 0
-            else 0.0
-        )
-        precision = (
-            true_positives / (true_positives + false_positives)
-            if (true_positives + false_positives) > 0
-            else 0.0
-        )
-
-        false_positives = len(detections.objects) - true_positives
-        false_negatives = len(ground_truth) - len(matched_gt_indices)
+        false_negatives = len(scoped_gt) - len(matched_gt_indices)
         return _make_result(true_positives, false_positives, false_negatives)
+
+    def _is_false_positive(self, det, classes, max_range, out_of_scope_gt) -> bool:
+        """An unmatched detection is a false alarm only if it lies inside the scope
+        and does not sit on a real object that is simply outside the scope."""
+        if max_range is not None and math.hypot(det.x, det.y) >= max_range:
+            return False
+        if classes is not None and det.object_class not in classes and det.object_class != UNKNOWN:
+            return False
+        return all(distance(det, g) >= self._distance_threshold for g in out_of_scope_gt)
 
 
 def _ratio(num: int, den: int) -> float:
