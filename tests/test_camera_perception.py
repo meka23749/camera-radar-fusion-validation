@@ -12,7 +12,8 @@ def _make_test_image(timestamp: float = 3.0) -> CameraImage:
     return CameraImage(pixels=pixels, timestamp=timestamp, camera_id="front")
 
 
-@pytest.mark.requirement("REQ-03")
+# Not tagged REQ-03: this checks the return TYPE, not the 80 m range.
+# REQ-03 stays uncovered until a real detector is evaluated on nuScenes.
 def test_detect_returns_a_list():
     """detect() returns a list of DetectedObject."""
     perception = CameraPerception()
