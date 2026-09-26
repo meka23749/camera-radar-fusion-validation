@@ -9,6 +9,8 @@ from dataclasses import dataclass
 from src.interfaces import ObstacleList, GroundTruthObject
 from src.geometry import distance
 
+UNKNOWN = "unknown"
+
 @dataclass
 class ValidationResult:
     """Metrics computed for one comparison."""
@@ -21,14 +23,23 @@ class ValidationResult:
 class Validation:
     """Compares detections against ground truth and computes metrics."""
 
-    def __init__(self, distance_threshold: float = 2.0):
+    def __init__(self, distance_threshold: float = 2.0, class_aware: bool = False):
         """Create the validator.
 
         Args:
             distance_threshold: max distance (meters) for a detection to count
                 as matching a ground-truth object.
+            class_aware: if True, a detection with a known class can only match
+                a ground-truth object of the same class ("unknown" matches any).
         """
         self._distance_threshold = distance_threshold
+        self._class_aware = class_aware
+
+    def _compatible(self, det, gt) -> bool:
+        """Can this detection match this ground-truth object?"""
+        if not self._class_aware or det.object_class == UNKNOWN:
+            return True
+        return det.object_class == gt.object_class
 
     def evaluate(
         self,
@@ -52,7 +63,7 @@ class Validation:
             best_distance = self._distance_threshold
 
             for i, gt in enumerate(ground_truth):
-                if i in matched_gt_indices:
+                if i in matched_gt_indices or not self._compatible(det, gt):
                     continue
                 d = distance(det, gt)
                 if d < best_distance:

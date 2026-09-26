@@ -74,3 +74,17 @@ def test_empty_everything_gives_zero_metrics():
     result = Validation().evaluate(detections, [])
     assert result.recall == 0.0
     assert result.precision == 0.0
+
+@pytest.mark.requirement("REQ-06")
+def test_class_aware_matching_rejects_wrong_class():
+    """A pedestrian detected on a car is not a correct detection."""
+    ped = DetectedObject("pedestrian", 10.0, 0.0, 0.0, 0.9, 1.0)
+    res = Validation(class_aware=True).evaluate(ObstacleList([ped], 1.0), [_gt(10.0, 0.0)])
+    assert res.true_positives == 0 and res.false_negatives == 1
+
+
+def test_unknown_radar_object_matches_any_class():
+    """A radar-only object ('unknown') still counts as a detected obstacle."""
+    radar_obj = DetectedObject("unknown", 10.0, 0.0, 0.0, 0.5, 1.0)
+    res = Validation(class_aware=True).evaluate(ObstacleList([radar_obj], 1.0), [_gt(10.0, 0.0)])
+    assert res.true_positives == 1
