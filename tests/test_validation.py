@@ -88,3 +88,13 @@ def test_unknown_radar_object_matches_any_class():
     radar_obj = DetectedObject("unknown", 10.0, 0.0, 0.0, 0.5, 1.0)
     res = Validation(class_aware=True).evaluate(ObstacleList([radar_obj], 1.0), [_gt(10.0, 0.0)])
     assert res.true_positives == 1
+
+def test_result_does_not_depend_on_detection_order():
+    """Same detections in another order give the same metrics."""
+    v = Validation(distance_threshold=3.0)
+    low = DetectedObject("car", 11.8, 0.0, 0.0, 0.2, 1.0)
+    high = DetectedObject("car", 10.3, 0.0, 0.0, 0.9, 1.0)
+    truth = [_gt(10.0, 0.0), _gt(14.0, 0.0)]
+    a = v.evaluate(ObstacleList([low, high], 1.0), truth)
+    b = v.evaluate(ObstacleList([high, low], 1.0), truth)
+    assert a == b

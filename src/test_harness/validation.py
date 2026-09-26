@@ -58,7 +58,9 @@ class Validation:
         matched_gt_indices = set()
         true_positives = 0
 
-        for det in detections.objects:
+        # Most confident detections claim ground truth first: the result
+        # must not depend on the (meaningless) order of the input list.
+        for det in sorted(detections.objects, key=lambda d: d.confidence, reverse=True):
             best_index = -1
             best_distance = self._distance_threshold
 
