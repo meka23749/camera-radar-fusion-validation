@@ -11,6 +11,7 @@ from src.geometry import distance
 
 UNKNOWN = "unknown"
 
+
 @dataclass
 class ValidationResult:
     """Metrics computed for one comparison."""
@@ -94,10 +95,35 @@ class Validation:
             else 0.0
         )
 
-        return ValidationResult(
-            true_positives=true_positives,
-            false_positives=false_positives,
-            false_negatives=false_negatives,
-            recall=recall,
-            precision=precision,
-        )
+        false_positives = len(detections.objects) - true_positives
+        false_negatives = len(ground_truth) - len(matched_gt_indices)
+        return _make_result(true_positives, false_positives, false_negatives)
+
+
+def _ratio(num: int, den: int) -> float:
+    """Safe division: 0.0 when the denominator is 0."""
+    return num / den if den > 0 else 0.0
+
+
+def _make_result(tp: int, fp: int, fn: int) -> ValidationResult:
+    return ValidationResult(
+        true_positives=tp,
+        false_positives=fp,
+        false_negatives=fn,
+        recall=_ratio(tp, tp + fn),
+        precision=_ratio(tp, tp + fp),
+    )
+
+
+def aggregate(results) -> ValidationResult:
+    """Micro-average over frames: sum TP/FP/FN first, THEN compute the ratios.
+
+    Averaging per-frame ratios would give a frame with 1 object the same
+    weight as a frame with 30 objects.
+    """
+    results = list(results)
+    return _make_result(
+        sum(r.true_positives for r in results),
+        sum(r.false_positives for r in results),
+        sum(r.false_negatives for r in results),
+    )

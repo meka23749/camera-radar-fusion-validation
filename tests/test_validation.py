@@ -3,6 +3,7 @@
 import pytest
 from src.test_harness.validation import Validation, ValidationResult
 from src.interfaces import DetectedObject, ObstacleList, GroundTruthObject
+from src.test_harness.validation import aggregate
 
 
 def _det(x, y, t=1.0):
@@ -98,3 +99,11 @@ def test_result_does_not_depend_on_detection_order():
     a = v.evaluate(ObstacleList([low, high], 1.0), truth)
     b = v.evaluate(ObstacleList([high, low], 1.0), truth)
     assert a == b
+
+
+def test_aggregate_is_micro_average():
+    """1 found out of 1, then 0 found out of 3 -> recall 1/4, not mean(1.0, 0.0)."""
+    f1 = Validation().evaluate(ObstacleList([_det(10.0, 0.0)], 1.0), [_gt(10.0, 0.0)])
+    f2 = Validation().evaluate(ObstacleList([], 1.0),
+                               [_gt(10.0, 0.0), _gt(20.0, 0.0), _gt(30.0, 0.0)])
+    assert aggregate([f1, f2]).recall == 0.25
