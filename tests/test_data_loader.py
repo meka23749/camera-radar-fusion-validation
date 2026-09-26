@@ -3,6 +3,7 @@
 import pytest
 from src.perception.data_loader import DataLoader
 from src.interfaces import CameraImage, RadarPoints
+import numpy as np
 
 
 def test_num_frames_matches_configuration():
@@ -32,3 +33,10 @@ def test_out_of_range_index_raises():
     loader = DataLoader(num_frames=5)
     with pytest.raises(IndexError):
         loader.get_frame(99)
+
+@pytest.mark.requirement("REQ-16")
+def test_same_frame_is_reproducible():
+    """Requesting the same frame twice gives exactly the same data (REQ-16)."""
+    first, _ = DataLoader(num_frames=5).get_frame(2)
+    second, _ = DataLoader(num_frames=5).get_frame(2)
+    assert np.array_equal(first.pixels, second.pixels)
