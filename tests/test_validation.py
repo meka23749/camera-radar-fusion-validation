@@ -3,6 +3,9 @@
 import pytest
 from src.test_harness.validation import Validation, ValidationResult
 from src.interfaces import DetectedObject, ObstacleList, GroundTruthObject
+from src.test_harness.validation import aggregate
+
+VEHICLES = {"car", "truck"}
 
 
 def _det(x, y, t=1.0):
@@ -74,3 +77,54 @@ def test_empty_everything_gives_zero_metrics():
     result = Validation().evaluate(detections, [])
     assert result.recall == 0.0
     assert result.precision == 0.0
+
+@pytest.mark.requirement("REQ-06")
+def test_class_aware_matching_rejects_wrong_class():
+    """A pedestrian detected on a car is not a correct detection."""
+    ped = DetectedObject("pedestrian", 10.0, 0.0, 0.0, 0.9, 1.0)
+    res = Validation(class_aware=True).evaluate(ObstacleList([ped], 1.0), [_gt(10.0, 0.0)])
+    assert res.true_positives == 0 and res.false_negatives == 1
+
+
+def test_unknown_radar_object_matches_any_class():
+    """A radar-only object ('unknown') still counts as a detected obstacle."""
+    radar_obj = DetectedObject("unknown", 10.0, 0.0, 0.0, 0.5, 1.0)
+    res = Validation(class_aware=True).evaluate(ObstacleList([radar_obj], 1.0), [_gt(10.0, 0.0)])
+    assert res.true_positives == 1
+
+def test_result_does_not_depend_on_detection_order():
+    """Same detections in another order give the same metrics."""
+    v = Validation(distance_threshold=3.0)
+    low = DetectedObject("car", 11.8, 0.0, 0.0, 0.2, 1.0)
+    high = DetectedObject("car", 10.3, 0.0, 0.0, 0.9, 1.0)
+    truth = [_gt(10.0, 0.0), _gt(14.0, 0.0)]
+    a = v.evaluate(ObstacleList([low, high], 1.0), truth)
+    b = v.evaluate(ObstacleList([high, low], 1.0), truth)
+    assert a == b
+
+
+def test_aggregate_is_micro_average():
+    """1 found out of 1, then 0 found out of 3 -> recall 1/4, not mean(1.0, 0.0)."""
+    f1 = Validation().evaluate(ObstacleList([_det(10.0, 0.0)], 1.0), [_gt(10.0, 0.0)])
+    f2 = Validation().evaluate(ObstacleList([], 1.0),
+                               [_gt(10.0, 0.0), _gt(20.0, 0.0), _gt(30.0, 0.0)])
+    assert aggregate([f1, f2]).recall == 0.25
+
+
+
+@pytest.mark.requirement("REQ-08")
+def test_req08_scope_only_counts_vehicles_closer_than_30m():
+    """REQ-08 is about vehicles < 30 m: the far car and the pedestrian are ignored."""
+    truth = [_gt(10.0, 0.0), _gt(50.0, 0.0),
+             GroundTruthObject("pedestrian", 5.0, 0.0, 0.0, 1.0)]
+    res = Validation().evaluate(ObstacleList([_det(10.0, 0.0)], 1.0), truth,
+                                classes=VEHICLES, max_range=30.0)
+    assert (res.true_positives, res.false_negatives, res.recall) == (1, 0, 1.0)
+
+
+def test_detection_of_out_of_scope_object_is_not_a_false_positive():
+    """Detecting the pedestrian is correct - it must not count against the vehicle scope."""
+    truth = [GroundTruthObject("pedestrian", 5.0, 0.0, 0.0, 1.0)]
+    ped = DetectedObject("pedestrian", 5.0, 0.0, 0.0, 0.9, 1.0)
+    res = Validation().evaluate(ObstacleList([ped], 1.0), truth, classes=VEHICLES, max_range=30.0)
+    assert res.false_positives == 0
