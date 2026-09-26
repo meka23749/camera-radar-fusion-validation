@@ -51,7 +51,9 @@ class DataLoader:
         timestamp = float(index)
 
         # --- Synthetic camera image (random pixels for now) ---
-        pixels = np.random.randint(0, 256, size=(900, 1600, 3), dtype=np.uint8)
+        # Seeded per frame index -> same index always gives the same image (REQ-16)
+        rng = np.random.default_rng(index)
+        pixels = rng.integers(0, 256, size=(900, 1600, 3), dtype=np.uint8)
         camera_image = CameraImage(pixels=pixels, timestamp=timestamp, camera_id="front")
 
         # --- Synthetic radar points (a few fake echoes for now) ---
