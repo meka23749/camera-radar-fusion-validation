@@ -5,7 +5,8 @@ from src.perception.radar_processing import RadarProcessing
 from src.interfaces import RadarPoint, RadarPoints, DetectedObject
 
 
-@pytest.mark.requirement("REQ-04")
+# Not tagged REQ-04: points are at 10 m and 25 m, nothing checks the 180 m range.
+# REQ-04 will be covered once radar processing has a range limit 
 def test_each_point_becomes_a_detection():
     """Every radar point produces one DetectedObject."""
     radar = RadarPoints(

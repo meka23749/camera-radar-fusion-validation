@@ -11,25 +11,45 @@ all requirement-linked tests.
 
 ---
 
+## Verification levels
+
+| Level | Meaning |
+|---|---|
+| **L1 - Logic** | A unit test proves that the mechanism behind the requirement works (e.g. the recall formula, the fusion merge rule). |
+| **L2 - Synthetic SiL** | The system's behaviour is measured on synthetic scenarios with known ground truth. |
+| **L3 - Real-data SiL** | The system's behaviour is measured on annotated nuScenes data. |
+
+A requirement is only fully verified at L2 or L3. L1 proves the building blocks, not the system.
+
 ## Traceability matrix
 
-| Requirement | Description | Verifying test(s) | Status |
-|---|---|---|---|
-| REQ-03 | Camera detection range (≥ 80 m) | `test_camera_perception::test_detect_returns_a_list` | ✅ Verified |
-| REQ-04 | Radar detection range (≥ 180 m) | `test_radar_processing::test_each_point_becomes_a_detection` | ✅ Verified |
-| REQ-05 | System range / camera-radar fusion | `test_fusion::test_close_camera_and_radar_merge_into_one` | ✅ Verified |
-| REQ-08 | Recall ≥ 0.90 (vehicles < 30 m) | `test_validation::test_missed_object_lowers_recall` | ✅ Verified |
-| REQ-09 | Precision (limit false positives) | `test_validation::test_invented_object_lowers_precision`, `test_output::test_low_confidence_objects_are_removed` | ✅ Verified |
-| REQ-10 | Latency ≤ 100 ms per frame | *(measurement planned)* | Pending |
-| REQ-12 | Camera/radar synchronization | `test_data_loader::test_camera_and_radar_are_synchronized`, `test_camera_perception::test_detections_carry_image_timestamp`, `test_radar_processing::test_detections_carry_frame_timestamp` | ✅ Verified |
+| Requirement | Description | Mandatory | Verifying test(s) | Level | Status |
+|---|---|---|---|---|---|
+| REQ-01 | Detect obstacles from camera + radar | yes | `test_pipeline::test_every_obstacle_has_a_finite_position` | L1 | ✅ Logic verified |
+| REQ-02 | Output position of each obstacle | yes | `test_pipeline::test_every_obstacle_has_a_finite_position` | L1 | ✅ Logic verified |
+| REQ-03 | Camera detection range (≥ 80 m) | yes | - | - | ❌ Not covered (camera is a stub) |
+| REQ-04 | Radar detection range (≥ 180 m) | yes | - | - | ❌ Not covered (no range limit in radar processing) |
+| REQ-05 | System range / camera-radar fusion | yes | `test_fusion::test_close_camera_and_radar_merge_into_one` | L1 | ⚠️ Fusion logic only (range not measured) |
+| REQ-06 | Output class of each obstacle | yes | - | - | ❌ Not covered (classification not validated) |
+| REQ-07 | Proximity warning | optional | - | - | Not implemented |
+| REQ-08 | Recall ≥ 0.90 (vehicles < 30 m) | yes | `test_validation::test_missed_object_lowers_recall` | L1 | ⚠️ Metric only (system not measured yet) |
+| REQ-09 | Precision ≥ 0.80 | yes | `test_validation::test_invented_object_lowers_precision`, `test_output::test_low_confidence_objects_are_removed` | L1 | ⚠️ Metric + filter only (system not measured yet) |
+| REQ-10 | Latency ≤ 100 ms per frame | yes | - | - | ❌ Not covered (no measurement) |
+| REQ-11 | Read nuScenes data | | - | - | ❌ Not implemented (synthetic loader) |
+| REQ-12 | Camera/radar synchronization | | `test_data_loader::test_camera_and_radar_are_synchronized`, `test_camera_perception::test_detections_carry_image_timestamp`, `test_radar_processing::test_detections_carry_frame_timestamp` | L1 | ✅ Logic verified |
+| REQ-13 | Structured, machine-readable output | | - | - | ❌ Not covered (no export format) |
+| REQ-14 | Every mandatory requirement has a test | | this matrix | Process | ❌ Not met (REQ-03, 04, 06, 10 uncovered) |
+| REQ-15 | Tests run in CI/CD | | `.github/workflows/tests.yml` | Process | ✅ Verified |
+| REQ-16 | Reproducible, documented results | | `test_data_loader::test_same_frame_is_reproducible` | L1 | ⚠️ Partial (inputs reproducible, no results report yet) |
 
 ---
 
 ## Coverage summary
 
-- **Requirements with at least one verifying test:** REQ-03, REQ-04, REQ-05, REQ-08, REQ-09, REQ-12
-- **Pending:** REQ-10 (latency measurement to be added)
-- All verifying tests currently **pass** (see CI status in the README badge).
+- **Logic verified (L1):** REQ-01, REQ-02, REQ-12
+- **Partially covered (L1 only):** REQ-05, REQ-08, REQ-09, REQ-16
+- **Not covered (mandatory):** REQ-03, REQ-04, REQ-06, REQ-10
+- **No requirement is verified at system level (L2/L3) yet.** This is the next milestone.
 
 ---
 

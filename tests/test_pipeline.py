@@ -7,6 +7,8 @@ from src.perception.fusion import Fusion
 from src.perception.output import Output
 from src.perception.pipeline import PerceptionPipeline
 from src.interfaces import ObstacleList
+import math
+import pytest
 
 
 def _make_pipeline():
@@ -46,3 +48,13 @@ def test_all_output_objects_pass_confidence_threshold():
     pipeline = _make_pipeline()
     result = pipeline.process_frame(0)
     assert all(obj.confidence >= 0.3 for obj in result.objects)
+
+
+@pytest.mark.requirement("REQ-01")
+@pytest.mark.requirement("REQ-02")
+def test_every_obstacle_has_a_finite_position():
+    """REQ-01: the pipeline outputs obstacles from camera + radar.
+    REQ-02: every obstacle has a valid position."""
+    result = _make_pipeline().process_frame(1)
+    assert result.objects
+    assert all(math.isfinite(o.x) and math.isfinite(o.y) for o in result.objects)
