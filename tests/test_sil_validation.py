@@ -42,7 +42,7 @@ def test_recall_vehicles_below_30m(reports, seed):
 
 
 @pytest.mark.requirement("REQ-09")
-@pytest.mark.xfail(strict=True, reason="Known defect: precision ~0.50-0.62, see steps 7-8")
+@pytest.mark.xfail(strict=True, reason="Known defect: precision ~0.76-0.78 after radar clustering, see step 8")
 @pytest.mark.parametrize("seed", SEEDS)
 def test_precision(reports, seed):
     assert reports[seed]["requirements"]["REQ-09"]["verdict"] == "PASS"
