@@ -14,6 +14,7 @@ from src.perception.nuscenes_loader import NuScenesLoader
 from tests.nuscenes_fixture import make_dataset, write_radar_pcd, RADAR_DTYPE, YAW_180
 
 
+@pytest.mark.requirement("REQ-11")
 def test_frames_follow_the_scene_order(tmp_path):
     """Samples are stored in reverse order in the file; frames are chronological."""
     loader = NuScenesLoader(make_dataset(tmp_path))
@@ -59,6 +60,7 @@ def test_measurements_too_far_apart_are_rejected(tmp_path):
         loader.get_frame(0)
 
 
+@pytest.mark.requirement("REQ-11")
 @pytest.mark.skipif("NUSCENES_ROOT" not in os.environ, reason="nuScenes data not available")
 def test_real_dataset_loads():
     """Smoke test on the real v1.0-mini dataset (runs locally only)."""
