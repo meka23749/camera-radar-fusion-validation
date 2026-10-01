@@ -79,3 +79,9 @@ def test_result_does_not_depend_on_input_order():
     b = Fusion().fuse(camera[::-1], radar[::-1], 1.0).objects
     key = lambda o: (o.object_class, o.x)
     assert sorted(map(key, a)) == sorted(map(key, b))
+
+def test_range_dependent_gate_merges_far_objects():
+    """At 60 m the camera depth error is several meters: a fixed 3 m gate misses the pair."""
+    camera, radar = [_cam("car", 60.0, 0.0)], [_rad(64.0, 0.0)]
+    assert len(Fusion(3.0, gate_per_meter=0.0).fuse(camera, radar, 1.0).objects) == 2
+    assert len(Fusion(3.0, gate_per_meter=0.08).fuse(camera, radar, 1.0).objects) == 1

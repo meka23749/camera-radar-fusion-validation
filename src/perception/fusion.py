@@ -9,7 +9,14 @@ Association is GLOBALLY optimal (Hungarian algorithm): among all possible
 camera-radar pairings, it picks the one with the most matches and the smallest
 total distance. Unlike greedy matching, the result does not depend on the
 order of the input lists.
+
+The association gate grows with range: the camera estimates depth from a
+single image, so its distance error grows with distance (~5 % of range).
+A fixed gate would fail to merge far camera and radar detections of the
+same object, creating one duplicate (false positive) per missed merge.
 """
+
+import math
 
 import numpy as np
 from scipy.optimize import linear_sum_assignment
@@ -23,14 +30,20 @@ NO_MATCH = 1e9   # cost of a forbidden pairing (farther apart than the gate)
 class Fusion:
     """Combines camera and radar detections into a single obstacle list."""
 
-    def __init__(self, distance_threshold: float = 3.0):
+    def __init__(self, distance_threshold: float = 3.0, gate_per_meter: float = 0.08):
         """Create the fusion block.
 
         Args:
-            distance_threshold: max distance (meters) below which a camera and
-                a radar detection are considered the same real object.
+            distance_threshold: base association gate (meters).
+            gate_per_meter: extra gate per meter of range
+                (0.08 -> gate of 3 + 0.08 * 50 = 7 m at 50 m). 0.0 = fixed gate.
         """
         self._distance_threshold = distance_threshold
+        self._gate_per_meter = gate_per_meter
+
+    def _gate(self, cam: DetectedObject) -> float:
+        """Association gate for this camera detection: grows with its range."""
+        return self._distance_threshold + self._gate_per_meter * math.hypot(cam.x, cam.y)
 
     def _associate(self, camera_detections, radar_detections) -> dict[int, int]:
         """Return {camera index: radar index} for the optimal set of pairs."""
@@ -40,9 +53,10 @@ class Fusion:
         # cost[i, j] = distance between camera i and radar j, or NO_MATCH if too far
         cost = np.full((len(camera_detections), len(radar_detections)), NO_MATCH)
         for i, cam in enumerate(camera_detections):
+            gate = self._gate(cam)
             for j, rad in enumerate(radar_detections):
                 d = distance(cam, rad)
-                if d < self._distance_threshold:
+                if d < gate:
                     cost[i, j] = d
 
         rows, cols = linear_sum_assignment(cost)
