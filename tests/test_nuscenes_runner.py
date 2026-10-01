@@ -33,6 +33,19 @@ def test_runner_on_hand_made_dataset(tmp_path):
     assert set(report["requirements"]) == {"REQ-04", "REQ-05", "REQ-08", "REQ-09", "REQ-10"}
     assert "MODELED" in to_markdown(report)
 
+def test_chance_level_is_reported(tmp_path):
+    """Frame 1 is compared with the ground truth of frame 2 and vice versa.
+
+    Frame 1's radar point (24.5 m) is far from frame 2's car (50 m), and frame 2
+    has no radar point: chance recall is 0 out of 3 vehicles.
+    """
+    band = run_nuscenes(make_dataset(tmp_path), seed=1)["metrics"]["radar_only_recall_vehicles"]["30-80 m"]
+    assert (band["chance"]["k"], band["chance"]["n"]) == (0, 3)
+
+
+def test_one_match_threshold_for_every_range(tmp_path):
+    report = run_nuscenes(make_dataset(tmp_path), seed=1)
+    assert report["config"]["match_threshold_m"] == 2.0
 
 def test_runner_is_reproducible(tmp_path):
     root = make_dataset(tmp_path)

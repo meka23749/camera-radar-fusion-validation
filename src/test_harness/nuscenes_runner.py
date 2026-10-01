@@ -9,7 +9,9 @@ radar-related is real: points, clutter, mounting, timing, ego motion.
     What it CANNOT tell:        anything about the real camera (REQ-03, REQ-06).
 
 Every metric is reported with n (number of ground-truth objects) and a 95 %
-confidence interval. A verdict is PASS only if the whole interval is above the
+confidence interval. Every recall in a range band also shows its CHANCE LEVEL:
+the recall the same detections reach against the ground truth of an unrelated
+frame. With dense radar clutter this is far from zero. A verdict is PASS only if the whole interval is above the
 target, FAIL if it is entirely below, INCONCLUSIVE otherwise. Caveat: the same
 object appears in consecutive frames, so observations are not independent and
 the intervals are optimistic (too narrow).
@@ -37,6 +39,7 @@ from src.test_harness.scenario import CameraModel, VEHICLES
 from src.test_harness.validation import Validation, aggregate
 
 RADAR_BANDS = [(0, 30), (30, 80), (80, 120), (120, 180)]
+MATCH_THRESHOLD = 2.0      # m, for every range (see explore_chance measurements)
 
 
 def wilson_interval(k: int, n: int, z: float = 1.96) -> tuple[float, float]:
@@ -76,11 +79,12 @@ def run_nuscenes(root, radar_filter: str = "none", seed: int = 42, max_frames: i
     radar_processing = radar_processing or RadarProcessing()
     fusion = fusion or Fusion()
     output = output or Output(confidence_threshold=0.3)
-    val = Validation(distance_threshold=2.0, class_aware=True)
-    val_far = Validation(distance_threshold=5.0, class_aware=True)
+    # One threshold for every range: with real clutter, a 5 m threshold lets
+    # unrelated detections "find" a vehicle by chance (measured: 60-68 % < 80 m).
+    val = Validation(distance_threshold=MATCH_THRESHOLD, class_aware=True)
 
-    overall, req08, far = [], [], []
-    radar_bands = {band: [] for band in RADAR_BANDS}
+    overall, req08 = [], []
+    frames = []                                        # (system, radar_only, evaluated gt) per frame
     latencies_ms = []
     n_frames = loader.num_frames() if max_frames is None else min(max_frames, loader.num_frames())
 
@@ -100,20 +104,31 @@ def run_nuscenes(root, radar_filter: str = "none", seed: int = 42, max_frames: i
             return ObstacleList([o for o in objects if ground_truth.in_field_of_view(token, o.x, o.y)],
                                 frame.timestamp)
 
-        system = in_region(final.objects)
+        system, radar_only = in_region(final.objects), in_region(radar_dets)
         overall.append(val.evaluate(system, gt.evaluated, ignored=gt.ignored))
         req08.append(val.evaluate(system, gt.evaluated, classes=VEHICLES, max_range=30.0,
                                   ignored=gt.ignored))
-        far.append(val_far.evaluate(system, _in_band(gt.evaluated, 80, 180)))
+        frames.append((system, radar_only, gt.evaluated))
 
-        radar_only = in_region(radar_dets)               # REQ-04: the radar alone
-        for lo, hi in RADAR_BANDS:
-            validator = val_far if lo >= 80 else val
-            radar_bands[(lo, hi)].append(validator.evaluate(radar_only, _in_band(gt.evaluated, lo, hi)))
+    def band_recall(band, detections_of, gt_of):
+        """Recall of vehicles in a range band. gt_of(i) picks the ground truth for frame i."""
+        lo, hi = band
+        return aggregate(val.evaluate(detections_of(i), _in_band(gt_of(i), lo, hi))
+                         for i in range(len(frames)))
 
-    r_all, r08, r_far = aggregate(overall), aggregate(req08), aggregate(far)
-    bands = {f"{lo}-{hi} m": aggregate(radar_bands[(lo, hi)]) for lo, hi in RADAR_BANDS}
-    far_radar = bands["120-180 m"]
+    # Chance level: same detections, ground truth of an UNRELATED frame (half the
+    # dataset away, i.e. another scene). Any recall measured this way is coincidence.
+    def real_gt(i):
+        return frames[i][2]
+
+    def other_gt(i):
+        return frames[(i + len(frames) // 2) % len(frames)][2]
+
+    def radar_of(i):
+        return frames[i][1]
+
+    def system_of(i):
+        return frames[i][0]
 
     def recall_counts(r):
         return r.true_positives, r.true_positives + r.false_negatives
@@ -121,18 +136,28 @@ def run_nuscenes(root, radar_filter: str = "none", seed: int = 42, max_frames: i
     def precision_counts(r):
         return r.true_positives, r.true_positives + r.false_positives
 
+    def with_chance(detections_of, band):
+        stat = _stat(*recall_counts(band_recall(band, detections_of, real_gt)))
+        stat["chance"] = _stat(*recall_counts(band_recall(band, detections_of, other_gt)))
+        return stat
+
+    r_all, r08 = aggregate(overall), aggregate(req08)
+    r_far = band_recall((80, 180), system_of, real_gt)
+    far_radar = band_recall((120, 180), radar_of, real_gt)
     p95 = sorted(latencies_ms)[int(0.95 * (len(latencies_ms) - 1))]
     return {
         "config": {
             "data": "nuScenes v1.0-mini: REAL radar + REAL ground truth, MODELED camera",
             "radar_filter": radar_filter, "seed": seed, "frames": n_frames,
+            "match_threshold_m": MATCH_THRESHOLD,
         },
         "metrics": {
             "precision_overall": _stat(*precision_counts(r_all)),
             "recall_overall": _stat(*recall_counts(r_all)),
             "recall_vehicles_<30m": _stat(*recall_counts(r08)),
-            "recall_vehicles_80-180m_fused": _stat(*recall_counts(r_far)),
-            "radar_only_recall_vehicles": {band: _stat(*recall_counts(r)) for band, r in bands.items()},
+            "recall_vehicles_80-180m_fused": with_chance(system_of, (80, 180)),
+            "radar_only_recall_vehicles": {f"{lo}-{hi} m": with_chance(radar_of, (lo, hi))
+                                           for lo, hi in RADAR_BANDS},
             "latency_ms": {"mean": statistics.mean(latencies_ms), "p95": p95},
         },
         "requirements": {
@@ -156,11 +181,16 @@ def to_markdown(report: dict) -> str:
     def fmt(s):
         if s["n"] == 0:
             return "n = 0"
-        return f"{s['value']:.3f} [{s['ci95'][0]:.2f}-{s['ci95'][1]:.2f}] (n = {s['n']})"
+        text = f"{s['value']:.3f} [{s['ci95'][0]:.2f}-{s['ci95'][1]:.2f}] (n = {s['n']})"
+        if "chance" in s and s["chance"]["n"]:
+            text += f" - chance level {s['chance']['value']:.3f}"
+        return text
 
     lines = [
         "# Semi-real SiL report (nuScenes)", "",
-        f"{c['data']}  ", f"radar filter `{c['radar_filter']}`, seed {c['seed']}, {c['frames']} frames", "",
+        f"{c['data']}  ",
+        f"radar filter `{c['radar_filter']}`, seed {c['seed']}, {c['frames']} frames, "
+        f"match threshold {c['match_threshold_m']} m", "",
         "| Metric | Value [95 % CI] (n) |", "|---|---|",
         f"| Precision, all classes | {fmt(m['precision_overall'])} |",
         f"| Recall, all classes | {fmt(m['recall_overall'])} |",
@@ -174,7 +204,8 @@ def to_markdown(report: dict) -> str:
     for req, r in report["requirements"].items():
         lines.append(f"| {req} | {r['target']} | {r['verdict']} |")
     lines += ["", "> Camera detections are MODELED: nothing here validates the real camera.",
-              "> Observations repeat across frames (not independent): intervals are optimistic."]
+              "> Observations repeat across frames (not independent): intervals are optimistic.",
+              "> Chance level = recall of the same detections against an unrelated frame's ground truth."]
     return "\n".join(lines) + "\n"
 
 
