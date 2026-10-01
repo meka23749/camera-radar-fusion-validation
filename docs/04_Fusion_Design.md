@@ -97,3 +97,17 @@ Nothing is dropped: fusion improves the result, it does not discard information.
 | REQ-02 (position output) | outputs position for every obstacle |
 | REQ-06 (classification) | class taken from the camera when available |
 | REQ-12 (synchronization) | only detections of the same timestamp are fused |
+
+
+---
+
+## Version 2 (driven by the SiL validation)
+
+| Finding (measured) | Fix |
+|---|---|
+| Greedy matching depends on list order | Optimal association (Hungarian algorithm, `scipy.optimize.linear_sum_assignment`) |
+| Fixed 3 m gate: a car seen by both sensors gives 2 objects in 14 % of frames at 40 m, 46 % at 75 m | Gate = 3 m + 0.08 × range (camera depth error ≈ 5 % of range) |
+| Timestamps were documented as checked, but were not | `SynchronizationError` if \|Δt\| > 50 ms (REQ-12) |
+
+The two association changes only work together: a wider gate with greedy matching
+breaks REQ-08 on seed 7 (0.886).
