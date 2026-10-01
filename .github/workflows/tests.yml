@@ -28,7 +28,7 @@ jobs:
       - name: Run tests (unit, SiL, traceability)
         run: pytest
 
-      - name: SiL validation run (requirement gate)
+      - name: Synthetic SiL regression (fusion logic)
         run: python -m src.test_harness.runner --seed 42 --frames 300 --out reports
 
       - name: Publish the report in the job summary

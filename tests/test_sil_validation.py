@@ -1,8 +1,11 @@
-"""End-to-end SiL validation on synthetic scenarios (verification level L2).
+"""Regression tests of the fusion logic on synthetic scenarios.
 
-These tests verify requirements on the MEASURED behaviour of the system,
-not only on the metric code. Three seeds guard against a result that only
-holds by luck.
+They run the synthetic bench with SYNTHETIC_REFERENCE_FUSION (the configuration
+tuned on the synthetic sensor models) and check that its verdicts do not change.
+They are NOT evidence for the requirements: the synthetic sensor models are not
+calibrated against real sensors (docs/08_Real_Data_Results.md). Requirement
+evidence comes from tests/test_l3_requirements.py (real nuScenes data).
+Only the reproducibility tests (REQ-16) are about the bench itself.
 """
 
 import pytest
@@ -34,25 +37,21 @@ def test_report_contains_all_verdicts(reports):
     assert set(reports[42]["requirements"]) == {"REQ-05", "REQ-08", "REQ-09", "REQ-10"}
 
 
-@pytest.mark.requirement("REQ-05")
 @pytest.mark.parametrize("seed", SEEDS)
 def test_far_vehicles_detected_by_fused_system(reports, seed):
     assert reports[seed]["requirements"]["REQ-05"]["verdict"] == "PASS"
 
 
-@pytest.mark.requirement("REQ-08")
 @pytest.mark.parametrize("seed", SEEDS)
 def test_recall_vehicles_below_30m(reports, seed):
     assert reports[seed]["requirements"]["REQ-08"]["verdict"] == "PASS"
 
 
-@pytest.mark.requirement("REQ-09")
 @pytest.mark.parametrize("seed", SEEDS)
 def test_precision(reports, seed):
     assert reports[seed]["requirements"]["REQ-09"]["verdict"] == "PASS"
 
 
-@pytest.mark.requirement("REQ-10")
 def test_latency_fusion_stage(reports):
     assert reports[42]["requirements"]["REQ-10"]["verdict"] == "PASS"
 

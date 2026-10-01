@@ -24,6 +24,15 @@ from src.test_harness.validation import Validation, aggregate
 TARGETS = {"REQ-08": 0.90, "REQ-09": 0.80, "REQ-10": 100.0}
 
 
+# Fusion configuration tuned on the SYNTHETIC sensor models (step 8). The system's
+# real configuration (Fusion() defaults) is tuned on real nuScenes data and fails
+# here, because the synthetic models are not calibrated against real sensors
+# (see docs/08_Real_Data_Results.md). This bench is therefore a REGRESSION test of
+# the fusion logic in a controlled world, not evidence for the requirements.
+SYNTHETIC_REFERENCE_FUSION = dict(distance_threshold=3.0, gate_per_meter=0.08,
+                                  radar_only_min_speed=None, lateral_gate=None)
+
+
 def run(seed: int = 42, frames: int = 300, fusion=None, radar_processing=None, output=None) -> dict:
     """Run the system under test on a synthetic scenario and evaluate it."""
     # --- Scenario + sensor models (the "world" and the "sensors") ---
@@ -33,7 +42,7 @@ def run(seed: int = 42, frames: int = 300, fusion=None, radar_processing=None, o
 
     # --- System under test (can be replaced to compare versions) ---
     radar_processing = radar_processing or RadarProcessing()
-    fusion = fusion or Fusion(distance_threshold=3.0)
+    fusion = fusion or Fusion(**SYNTHETIC_REFERENCE_FUSION)
     output = output or Output(confidence_threshold=0.3)
 
     # --- Validation ---
@@ -107,8 +116,9 @@ def to_markdown(report: dict) -> str:
         f"FN={o['false_negatives']}, recall={o['recall']:.3f}, precision={o['precision']:.3f}",
         f"- Latency: mean={lat['mean']:.3f} ms, p95={lat['p95']:.3f} ms, max={lat['max']:.3f} ms",
         "",
-        "> Synthetic sensor models validate the fusion logic only. "
-        "REQ-03 / REQ-04 (sensor ranges) require real nuScenes data.",
+        "> Regression test of the fusion logic with the synthetic reference configuration. "
+        "The synthetic sensor models are not calibrated against real sensors: these verdicts "
+        "are NOT evidence for the requirements (see docs/08_Real_Data_Results.md).",
     ]
     return "\n".join(lines) + "\n"
 

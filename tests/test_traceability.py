@@ -17,8 +17,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 # Mandatory requirements that are knowingly not covered yet, and why.
 KNOWN_UNCOVERED = {
-    "REQ-03",   # camera range: needs a real detector on real data (nuScenes)
-    "REQ-04",   # radar range: sensor property, needs real radar data
+    "REQ-03",   # camera range: needs a real camera detector (step 12)
 }
 
 

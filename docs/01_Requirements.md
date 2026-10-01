@@ -51,11 +51,16 @@ annotierten Realdaten des öffentlichen Datensatzes **nuScenes**. Als Referenz
 | ID | Anforderung | Zielwert | Priorität |
 |---|---|---|---|
 | REQ-03 | Reichweite Kamera: Fahrzeuge müssen bis mindestens 80 m erkannt werden. | ≥ 80 m | Muss |
-| REQ-04 | Reichweite Radar: Objekte müssen bis mindestens 180 m erkannt werden. | ≥ 180 m | Muss |
-| REQ-05 | Reichweite Gesamtsystem: Über den von mindestens einem Sensor abgedeckten Bereich muss eine Hinderniserkennung erfolgen. | bis 180 m | Muss |
+| REQ-04 | Reichweite Radar: Fahrzeuge zwischen 120 und 180 m müssen vom Radar allein mit einer Erkennungsrate (Recall) > 0,5 erkannt werden. | Recall > 0,5 (120–180 m) | Muss |
+| REQ-05 | Reichweite Gesamtsystem: Fahrzeuge zwischen 80 und 180 m müssen vom Gesamtsystem mit einer Erkennungsrate (Recall) > 0,5 erkannt werden. | Recall > 0,5 (80–180 m) | Muss |
 | REQ-08 | Erkennungsrate (Recall) für Fahrzeuge in weniger als 30 m Entfernung. | ≥ 0,90 | Muss |
 | REQ-09 | Fehldetektionsrate begrenzen (Precision). Priorität liegt auf hohem Recall (Sicherheit), Fehldetektionen müssen jedoch begrenzt bleiben (Vermeidung von Fehlalarmen). | ≥ 0,80 | Muss |
 | REQ-10 | Latenz pro Verarbeitungszyklus (Frame): Eingang Sensordaten bis Ausgabe der Objektliste. | ≤ 100 ms | Muss |
+
+> **Nachweisregel für Zielwerte (REQ-04, REQ-05, REQ-08, REQ-09):** Ein Zielwert gilt als
+> nachgewiesen, wenn das gesamte 95-%-Konfidenzintervall (Wilson) über dem Zielwert liegt,
+> und als verfehlt, wenn es vollständig darunter liegt. Andernfalls ist das Ergebnis nicht
+> schlüssig (zu wenige Objekte). Jedes Ergebnis wird mit der Anzahl der Objekte angegeben.
 
 > **Hinweis zu REQ-10:** Der Zielwert von 100 ms entspricht der Echtzeitanforderung
 > einer typischen ADAS-Kamera (10–30 fps). Auf der Entwicklungsumgebung (CPU ohne
@@ -92,6 +97,7 @@ annotierten Realdaten des öffentlichen Datensatzes **nuScenes**. Als Referenz
   angepasst werden (Anforderungen sind iterativ; Änderungen werden versioniert).
 - Radardaten von nuScenes liegen als vorverarbeitete Punktlisten vor
   (kein rohes Radarsignal).
+- Der Zielwert „Recall > 0,5" für REQ-04 und REQ-05 ist eine Annahme und mit den Stakeholdern abzustimmen.
 
 
 ---
