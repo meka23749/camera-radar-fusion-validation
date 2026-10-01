@@ -27,19 +27,38 @@ from src.geometry import distance
 NO_MATCH = 1e9   # cost of a forbidden pairing (farther apart than the gate)
 
 
+class SynchronizationError(ValueError):
+    """Raised when detections from different frames are passed to fusion (REQ-12)."""
+
 class Fusion:
     """Combines camera and radar detections into a single obstacle list."""
 
-    def __init__(self, distance_threshold: float = 3.0, gate_per_meter: float = 0.08):
+    def __init__(
+        self,
+        distance_threshold: float = 3.0,
+        gate_per_meter: float = 0.08,
+        max_time_offset: float = 0.05,
+    ):
         """Create the fusion block.
 
         Args:
             distance_threshold: base association gate (meters).
             gate_per_meter: extra gate per meter of range
                 (0.08 -> gate of 3 + 0.08 * 50 = 7 m at 50 m). 0.0 = fixed gate.
+            max_time_offset: max allowed |detection timestamp - frame timestamp| (s).
         """
         self._distance_threshold = distance_threshold
         self._gate_per_meter = gate_per_meter
+        self._max_time_offset = max_time_offset
+
+    def _check_sync(self, detections, timestamp: float) -> None:
+        """Refuse detections that do not belong to this frame (REQ-12)."""
+        for d in detections:
+            if abs(d.timestamp - timestamp) > self._max_time_offset:
+                raise SynchronizationError(
+                    f"Detection at t={d.timestamp} passed to frame t={timestamp} "
+                    f"(max offset {self._max_time_offset} s)"
+                )
 
     def _gate(self, cam: DetectedObject) -> float:
         """Association gate for this camera detection: grows with its range."""
@@ -78,6 +97,8 @@ class Fusion:
         Returns:
             An ObstacleList with the fused obstacles.
         """
+        self._check_sync(camera_detections, timestamp)
+        self._check_sync(radar_detections, timestamp)
         matches = self._associate(camera_detections, radar_detections)
         fused: list[DetectedObject] = []
 

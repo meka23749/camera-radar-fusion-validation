@@ -85,3 +85,16 @@ def test_range_dependent_gate_merges_far_objects():
     camera, radar = [_cam("car", 60.0, 0.0)], [_rad(64.0, 0.0)]
     assert len(Fusion(3.0, gate_per_meter=0.0).fuse(camera, radar, 1.0).objects) == 2
     assert len(Fusion(3.0, gate_per_meter=0.08).fuse(camera, radar, 1.0).objects) == 1
+
+@pytest.mark.requirement("REQ-12")
+def test_detections_from_another_frame_are_rejected():
+    """Fusing a detection from another frame is a synchronization error (REQ-12)."""
+    from src.perception.fusion import SynchronizationError
+    with pytest.raises(SynchronizationError):
+        Fusion().fuse([_cam("car", 10.0, 0.0, t=2.0)], [], timestamp=1.0)
+
+
+def test_small_timestamp_offset_is_accepted():
+    """Camera and radar are never sampled at exactly the same instant: 20 ms is fine."""
+    result = Fusion().fuse([_cam("car", 10.0, 0.0, t=1.02)], [], timestamp=1.0)
+    assert len(result.objects) == 1
