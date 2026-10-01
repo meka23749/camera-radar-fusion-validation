@@ -6,6 +6,11 @@ holds by luck.
 """
 
 import pytest
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
 from src.test_harness.runner import run
 
 SEEDS = [42, 7, 123]
@@ -51,3 +56,23 @@ def test_precision(reports, seed):
 @pytest.mark.requirement("REQ-10")
 def test_latency_fusion_stage(reports):
     assert reports[42]["requirements"]["REQ-10"]["verdict"] == "PASS"
+
+def _metrics_in_fresh_process(hash_seed: str) -> dict:
+    """Run the runner in a NEW Python process with a given hash seed."""
+    code = ("import json; from src.test_harness.runner import run; "
+            "print(json.dumps(run(seed=42, frames=300)['metrics']['overall_<80m']))")
+    env = {**os.environ, "PYTHONHASHSEED": hash_seed}
+    out = subprocess.run([sys.executable, "-c", code], env=env, capture_output=True,
+                         text=True, check=True, cwd=Path(__file__).resolve().parents[1])
+    return json.loads(out.stdout)
+
+
+@pytest.mark.requirement("REQ-16")
+def test_runner_is_reproducible_across_processes():
+    """Same seed -> identical metrics, even in separate Python processes.
+
+    Python randomizes the iteration order of sets of strings in every new
+    process (PYTHONHASHSEED). A test that runs twice in the SAME process
+    cannot detect that; this one can.
+    """
+    assert _metrics_in_fresh_process("0") == _metrics_in_fresh_process("2")
