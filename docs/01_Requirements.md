@@ -70,7 +70,7 @@ annotierten Realdaten des öffentlichen Datensatzes **nuScenes**. Als Referenz
 | ID | Anforderung |
 |---|---|
 | REQ-11 | Das System muss Kamerabilder und Radardaten aus dem nuScenes-Datensatz einlesen. |
-| REQ-12 | Kamera- und Radardaten müssen zeitlich synchronisiert verarbeitet werden (gleicher Zeitstempel/Frame). |
+| REQ-12 | Kamera- und Radardaten eines Frames dürfen zeitlich höchstens 100 ms auseinanderliegen; die Radardaten werden vor der Fusion auf den Zeitstempel der Kamera bewegungskompensiert. |
 | REQ-13 | Die Ausgabe muss eine strukturierte Hindernisliste sein (Klasse, Position, ggf. Geschwindigkeit) in maschinenlesbarem Format. |
 
 ---
@@ -92,3 +92,12 @@ annotierten Realdaten des öffentlichen Datensatzes **nuScenes**. Als Referenz
   angepasst werden (Anforderungen sind iterativ; Änderungen werden versioniert).
 - Radardaten von nuScenes liegen als vorverarbeitete Punktlisten vor
   (kein rohes Radarsignal).
+
+
+---
+
+## 8. Änderungshistorie
+
+| Version | Datum | Anforderung | Änderung | Begründung |
+|---|---|---|---|---|
+| 1.1 | 2026-10-01 | REQ-12 | „gleicher Zeitstempel/Frame" ersetzt durch „höchstens 100 ms Abstand, Radardaten bewegungskompensiert" | Messung auf nuScenes v1.0-mini (404 Samples): Kamera (12 Hz) und Radar (13 Hz) messen nie gleichzeitig. Abstand Median 35,7 ms, Maximum 72,1 ms; Eigenbewegung zwischen beiden Messungen bis 1,07 m. Die ursprüngliche Formulierung war nicht erfüllbar. |
