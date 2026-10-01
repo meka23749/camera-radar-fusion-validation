@@ -39,6 +39,7 @@ class Fusion:
         gate_per_meter: float = 0.08,
         max_time_offset: float = 0.05,
         radar_only_min_speed: float | None = None,
+        lateral_gate: float | None = None,
     ):
         """Create the fusion block.
 
@@ -50,11 +51,16 @@ class Fusion:
             radar_only_min_speed: if set, a radar detection that NO camera detection
                 confirms is kept only if it moves at least this fast (m/s, over ground).
                 Real radar clutter (guard rails, poles, walls) is static.
+            lateral_gate: if set, the gate becomes an ELLIPSE around the camera detection:
+                along the line of sight its half-length is the range gate above (camera
+                depth is uncertain), across it is lateral_gate metres (camera bearing is
+                precise). None = circular gate.
         """
         self._distance_threshold = distance_threshold
         self._gate_per_meter = gate_per_meter
         self._max_time_offset = max_time_offset
         self._radar_only_min_speed = radar_only_min_speed
+        self._lateral_gate = lateral_gate
 
     def _check_sync(self, detections, timestamp: float) -> None:
         """Refuse detections that do not belong to this frame (REQ-12)."""
@@ -69,19 +75,39 @@ class Fusion:
         """Association gate for this camera detection: grows with its range."""
         return self._distance_threshold + self._gate_per_meter * math.hypot(cam.x, cam.y)
 
+    def _gate_cost(self, cam: DetectedObject, rad: DetectedObject) -> float | None:
+        """Cost of pairing cam with rad, or None if rad is outside the gate.
+
+        Circular gate: cost = distance in metres.
+        Elliptical gate: the offset is split into a component ALONG the camera's
+        line of sight (depth, poorly known) and one ACROSS it (bearing, well
+        known); cost = normalized distance, 1.0 on the edge of the ellipse.
+        """
+        depth_gate = self._gate(cam)
+        if self._lateral_gate is None:
+            d = distance(cam, rad)
+            return d if d < depth_gate else None
+
+        r = math.hypot(cam.x, cam.y)
+        ux, uy = (cam.x / r, cam.y / r) if r > 1e-6 else (1.0, 0.0)   # line of sight
+        dx, dy = rad.x - cam.x, rad.y - cam.y
+        along = dx * ux + dy * uy
+        across = -dx * uy + dy * ux
+        cost = math.hypot(along / depth_gate, across / self._lateral_gate)
+        return cost if cost < 1.0 else None
+
     def _associate(self, camera_detections, radar_detections) -> dict[int, int]:
         """Return {camera index: radar index} for the optimal set of pairs."""
         if not camera_detections or not radar_detections:
             return {}
 
-        # cost[i, j] = distance between camera i and radar j, or NO_MATCH if too far
+        # cost[i, j] = gate cost of camera i with radar j, or NO_MATCH if outside the gate
         cost = np.full((len(camera_detections), len(radar_detections)), NO_MATCH)
         for i, cam in enumerate(camera_detections):
-            gate = self._gate(cam)
             for j, rad in enumerate(radar_detections):
-                d = distance(cam, rad)
-                if d < gate:
-                    cost[i, j] = d
+                c = self._gate_cost(cam, rad)
+                if c is not None:
+                    cost[i, j] = c
 
         rows, cols = linear_sum_assignment(cost)
         return {int(i): int(j) for i, j in zip(rows, cols) if cost[i, j] < NO_MATCH}
