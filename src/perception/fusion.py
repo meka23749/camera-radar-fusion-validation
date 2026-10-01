@@ -38,6 +38,7 @@ class Fusion:
         distance_threshold: float = 3.0,
         gate_per_meter: float = 0.08,
         max_time_offset: float = 0.05,
+        radar_only_min_speed: float | None = None,
     ):
         """Create the fusion block.
 
@@ -46,10 +47,14 @@ class Fusion:
             gate_per_meter: extra gate per meter of range
                 (0.08 -> gate of 3 + 0.08 * 50 = 7 m at 50 m). 0.0 = fixed gate.
             max_time_offset: max allowed |detection timestamp - frame timestamp| (s).
+            radar_only_min_speed: if set, a radar detection that NO camera detection
+                confirms is kept only if it moves at least this fast (m/s, over ground).
+                Real radar clutter (guard rails, poles, walls) is static.
         """
         self._distance_threshold = distance_threshold
         self._gate_per_meter = gate_per_meter
         self._max_time_offset = max_time_offset
+        self._radar_only_min_speed = radar_only_min_speed
 
     def _check_sync(self, detections, timestamp: float) -> None:
         """Refuse detections that do not belong to this frame (REQ-12)."""
@@ -122,16 +127,19 @@ class Fusion:
 
         used_radar_indices = set(matches.values())
         for j, rad in enumerate(radar_detections):
-            if j not in used_radar_indices:
-                fused.append(
-                    DetectedObject(
-                        object_class=rad.object_class,   # stays "unknown"
-                        x=rad.x,
-                        y=rad.y,
-                        velocity=rad.velocity,
-                        confidence=rad.confidence,
-                        timestamp=timestamp,
-                    )
+            if j in used_radar_indices:
+                continue
+            if self._radar_only_min_speed is not None and abs(rad.velocity) < self._radar_only_min_speed:
+                continue                     # unconfirmed AND static: most likely clutter
+            fused.append(
+                DetectedObject(
+                    object_class=rad.object_class,   # stays "unknown"
+                    x=rad.x,
+                    y=rad.y,
+                    velocity=rad.velocity,
+                    confidence=rad.confidence,
+                    timestamp=timestamp,
                 )
+            )
 
         return ObstacleList(objects=fused, timestamp=timestamp)

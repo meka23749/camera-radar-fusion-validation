@@ -98,3 +98,21 @@ def test_small_timestamp_offset_is_accepted():
     """Camera and radar are never sampled at exactly the same instant: 20 ms is fine."""
     result = Fusion().fuse([_cam("car", 10.0, 0.0, t=1.02)], [], timestamp=1.0)
     assert len(result.objects) == 1
+
+def test_unconfirmed_static_radar_object_is_dropped():
+    """With a minimum speed, a static radar object that no camera confirms is removed."""
+    static, moving = _rad(40.0, 5.0, vel=0.2), _rad(60.0, -5.0, vel=-8.0)
+    result = Fusion(radar_only_min_speed=1.0).fuse([], [static, moving], 1.0)
+    assert [o.x for o in result.objects] == [60.0]
+
+
+def test_confirmed_static_radar_object_is_kept():
+    """A parked car seen by the camera AND the radar is fused, even if it does not move."""
+    parked = _rad(20.5, 0.0, vel=0.0)
+    result = Fusion(radar_only_min_speed=1.0).fuse([_cam("car", 20.0, 0.0)], [parked], 1.0)
+    assert [(o.object_class, o.x) for o in result.objects] == [("car", 20.5)]
+
+
+def test_without_minimum_speed_every_radar_object_is_kept():
+    static = _rad(40.0, 5.0, vel=0.0)
+    assert len(Fusion().fuse([], [static], 1.0).objects) == 1
