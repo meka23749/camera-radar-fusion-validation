@@ -104,12 +104,17 @@ First system-level results (synthetic SiL, seed 42, 300 frames):
 | Requirement | Target | Measured | Verdict |
 |---|---|---|---|
 | REQ-05 - far vehicles (80-180 m) detected | recall > 0.5 | 0.83 | ✅ |
-| REQ-08 - recall, vehicles < 30 m | ≥ 0.90 | 0.97 | ✅ |
-| REQ-09 - precision | ≥ 0.80 | 0.50 | ❌ known defect, fix in progress |
+| REQ-08 - recall, vehicles < 30 m | ≥ 0.90 | 0.92 | ✅ small margin, monitored |
+| REQ-09 - precision | ≥ 0.80 | 0.81 | ✅ small margin, monitored |
 | REQ-10 - latency (fusion stage) | ≤ 100 ms | < 1 ms | ✅ |
 
-The validation pipeline found a real defect: each radar echo was turned into its own
-object, producing duplicate detections. The fix is in progress.
+The validation pipeline found real defects and measured each fix:
+
+| Version | Precision (REQ-09) | Recall < 30 m (REQ-08) |
+|---|---|---|
+| Initial | 0.50 ❌ | 0.97 |
+| + radar echo clustering | 0.76 ❌ | 0.93 |
+| + optimal association, range-dependent gate | 0.81 ✅ | 0.92 |
 
 Not yet covered: sensor ranges (REQ-03, REQ-04) need real data; the camera detector
 is a stub. See the [Traceability Matrix](docs/06_Traceability_Matrix.md) for the

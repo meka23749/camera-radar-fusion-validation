@@ -32,11 +32,11 @@ A requirement is only fully verified at L2 or L3. L1 proves the building blocks,
 | REQ-05 | System range / camera-radar fusion | yes | `test_fusion::test_close_camera_and_radar_merge_into_one`, `test_sil_validation::test_far_vehicles_detected_by_fused_system` | L2 | ✅ Verified (synthetic SiL, 3 seeds) |
 | REQ-06 | Output class of each obstacle | yes | `test_validation::test_class_aware_matching_rejects_wrong_class` | L1 | ⚠️ Class-aware metric only (classification not measured yet) |
 | REQ-07 | Proximity warning | optional | - | - | Not implemented |
-| REQ-08 | Recall ≥ 0.90 (vehicles < 30 m) | yes | `test_validation::test_req08_scope_only_counts_vehicles_closer_than_30m`, `test_sil_validation::test_recall_vehicles_below_30m` | L2 | ✅ Verified (synthetic SiL, 0.93 - small margin, monitor) |
-| REQ-09 | Precision ≥ 0.80 | yes | `test_sil_validation::test_precision` (xfail) | L2 | ❌ Fails (measured 0.76-0.78 after radar clustering, known defect) |
+| REQ-08 | Recall ≥ 0.90 (vehicles < 30 m) | yes | `test_validation::test_req08_scope_only_counts_vehicles_closer_than_30m`, `test_sil_validation::test_recall_vehicles_below_30m` | L2 | ✅ Verified (synthetic SiL, 0.91-0.92 - small margin, monitor) |
+| REQ-09 | Precision ≥ 0.80 | yes | `test_sil_validation::test_precision` | L2 | ✅ Verified (synthetic SiL, 0.80-0.82 - small margin, monitor) |
 | REQ-10 | Latency ≤ 100 ms per frame | yes | `test_sil_validation::test_latency_fusion_stage` | L2 | ⚠️ Fusion stage only (no real detector yet) |
 | REQ-11 | Read nuScenes data | | - | - | ❌ Not implemented (synthetic loader) |
-| REQ-12 | Camera/radar synchronization | | `test_data_loader::test_camera_and_radar_are_synchronized`, `test_camera_perception::test_detections_carry_image_timestamp`, `test_radar_processing::test_detections_carry_frame_timestamp` | L1 | ✅ Logic verified |
+| REQ-12 | Camera/radar synchronization | | `test_data_loader::test_camera_and_radar_are_synchronized`, `test_camera_perception::test_detections_carry_image_timestamp`, `test_radar_processing::test_detections_carry_frame_timestamp`, `test_fusion::test_detections_from_another_frame_are_rejected` | L1 | ✅ Logic verified |
 | REQ-13 | Structured, machine-readable output | | - | - | ❌ Not covered (no export format) |
 | REQ-14 | Every mandatory requirement has a test | | this matrix | Process | ❌ Not met (REQ-03, 04 uncovered) |
 | REQ-15 | Tests run in CI/CD | | `.github/workflows/tests.yml` | Process | ✅ Verified |
@@ -46,10 +46,11 @@ A requirement is only fully verified at L2 or L3. L1 proves the building blocks,
 
 ## Coverage summary
 
-- **Verified at L2 (synthetic SiL):** REQ-05, REQ-08, REQ-16
+- **Verified at L2 (synthetic SiL):** REQ-05, REQ-08, REQ-09, REQ-16
 - **Logic verified (L1):** REQ-01, REQ-02, REQ-12
 - **Partially covered:** REQ-06 (metric only), REQ-10 (fusion stage only)
-- **Failing:** REQ-09 - precision 0.76-0.78 vs. target 0.80 (was 0.50-0.62 before radar clustering)- **Not covered (mandatory):** REQ-03, REQ-04 (need real sensor data)
+- **Failing:** none (REQ-09 fixed by radar clustering + fusion v2; margins are small)
+- **Not covered (mandatory):** REQ-03, REQ-04 (need real sensor data)
 
 > Reference metrics come from the CI environment (Linux, Python 3.12). Other platforms may differ
 > slightly (floating-point), e.g. precision 0.496 vs 0.497 on Windows; verdicts are identical.
