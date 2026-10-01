@@ -18,11 +18,26 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: pip
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run tests
+      - name: Run tests (unit, SiL, traceability)
         run: pytest
+
+      - name: SiL validation run (requirement gate)
+        run: python -m src.test_harness.runner --seed 42 --frames 300 --out reports
+
+      - name: Publish the report in the job summary
+        if: always()
+        run: cat reports/validation_report.md >> "$GITHUB_STEP_SUMMARY" || true
+
+      - name: Upload the reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-reports
+          path: reports/
