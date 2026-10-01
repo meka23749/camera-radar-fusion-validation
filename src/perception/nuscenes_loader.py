@@ -14,8 +14,9 @@ camera timestamp. The compensation goes through the global frame:
 It corrects the motion of OUR vehicle; the motion of other objects during the
 offset is not corrected here.
 
-The loader does NOT filter radar points: all points are returned, whatever
-their quality flags. Filtering is a processing decision, measured separately.
+Radar points can be filtered on the quality flags the radar itself reports
+(radar_filter, see RADAR_FILTERS). The default keeps every point: which filter
+is best is a decision measured on real data, not assumed.
 Image pixels are not loaded (the camera detector is still a stub).
 
 Usage:
@@ -36,6 +37,19 @@ from src.perception.transforms import (
     make_transform, invert_transform, transform_points, rotate_vectors,
 )
 
+# Codes of invalid_state that the radar itself marks as VALID
+# (nuscenes-devkit, RadarPointCloud docstring). The others are invalid:
+# low RCS, near-field artefact, far range not confirmed, mirror, outside FOV, harmonics.
+VALID_STATES = {0x00, 0x04, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0F, 0x10, 0x11}
+
+RADAR_FILTERS = {
+    # keep every point
+    "none": lambda p: np.ones(len(p), dtype=bool),
+    # drop only the points the radar itself declares invalid
+    "valid": lambda p: np.isin(p["invalid_state"], list(VALID_STATES)),
+    # the devkit's default (chosen for its tutorial plots, not for detection)
+    "devkit": lambda p: (p["invalid_state"] == 0) & (p["ambig_state"] == 3) & (p["dyn_prop"] < 7),
+}
 
 @dataclass
 class NuScenesFrame:
@@ -58,6 +72,7 @@ class NuScenesLoader:
         camera: str = "CAM_FRONT",
         radar: str = "RADAR_FRONT",
         max_sync_offset: float = 0.100,
+        radar_filter: str = "none",
     ):
         """
         Args:
@@ -65,8 +80,10 @@ class NuScenesLoader:
             version: metadata folder name.
             camera, radar: sensor channels to use.
             max_sync_offset: max |radar time - camera time| in seconds (REQ-12).
+            radar_filter: name of a filter in RADAR_FILTERS.
         """
         self._root = Path(root)
+        self._radar_filter = RADAR_FILTERS[radar_filter]
         self._max_sync_offset = max_sync_offset
         meta = self._root / version
 
@@ -120,6 +137,7 @@ class NuScenesLoader:
         chain = invert_transform(ego_cam) @ self._pose(rad["ego_pose_token"]) @ radar_to_ego
 
         raw = read_radar_pcd(self._root / rad["filename"])
+        raw = raw[self._radar_filter(raw)]
         xyz = transform_points(chain, np.column_stack([raw["x"], raw["y"], raw["z"]]))
         vel = rotate_vectors(chain, np.column_stack([raw["vx_comp"], raw["vy_comp"],
                                                      np.zeros(len(raw))]))

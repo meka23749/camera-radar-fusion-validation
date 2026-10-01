@@ -6,11 +6,12 @@ run in CI. The last test runs on the real dataset only if NUSCENES_ROOT is set.
 
 import os
 
+import numpy as np
 import pytest
 
 from src.perception.fusion import SynchronizationError
 from src.perception.nuscenes_loader import NuScenesLoader
-from tests.nuscenes_fixture import make_dataset, YAW_180
+from tests.nuscenes_fixture import make_dataset, write_radar_pcd, RADAR_DTYPE, YAW_180
 
 
 def test_frames_follow_the_scene_order(tmp_path):
@@ -67,3 +68,30 @@ def test_real_dataset_loads():
     assert all(abs(f.sync_offset) <= 0.100 for f in frames)
     assert all(len(f.radar.points) > 0 for f in frames)
     assert all(f.camera_path.exists() for f in frames)
+
+def _radar_points_with_states(states):
+    """One radar point per (invalid_state, ambig_state, dyn_prop) triple, 20 m ahead."""
+    points = np.zeros(len(states), dtype=RADAR_DTYPE)
+    points["x"] = 20.0
+    points["y"] = np.arange(len(states)) * 3.0           # spread out laterally
+    for field_name, column in zip(("invalid_state", "ambig_state", "dyn_prop"), zip(*states)):
+        points[field_name] = column
+    return points
+
+
+@pytest.mark.parametrize("radar_filter, expected_points", [
+    ("none", 5),      # everything
+    ("valid", 4),     # drops the point the radar declares invalid (outside its FOV)
+    ("devkit", 1),    # also drops low RCS, ambiguous and "stopped" points
+])
+def test_radar_filters(tmp_path, radar_filter, expected_points):
+    root = make_dataset(tmp_path)
+    write_radar_pcd(root / "samples/RADAR_FRONT/rad1.pcd", _radar_points_with_states([
+        (0, 3, 1),        # valid, unambiguous, stationary   -> kept by every filter
+        (4, 3, 1),        # valid but low RCS                -> dropped by devkit
+        (7, 3, 0),        # INVALID: outside sensor FOV      -> dropped by valid and devkit
+        (0, 3, 7),        # valid, "stopped"                 -> dropped by devkit
+        (0, 0, 1),        # valid, Doppler ambiguity invalid -> dropped by devkit
+    ]))
+    frame = NuScenesLoader(root, radar_filter=radar_filter).get_frame(0)
+    assert len(frame.radar.points) == expected_points
