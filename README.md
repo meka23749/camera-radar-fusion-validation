@@ -30,9 +30,9 @@ Decision/actuation (braking, steering) is explicitly out of scope.
 
 - **Systems engineering:** a formal requirements specification and requirement ↔ test traceability
 - **Sensor & perception:** radar echo clustering and camera–radar fusion (camera detector: stub, real detector planned)
-- **Validation:** automated measurement of recall, precision and latency against ground truth
-- **CI/CD:** automated build and test execution on every commit
-- **Reproducibility:** seeded, deterministic runs and generated validation report (containerization planned)
+- **Validation:** automated measurement of recall, precision and latency against ground truth, with a PASS/FAIL verdict per requirement
+- **CI/CD:** every push and pull request runs unit, SiL and traceability tests; the validation report is published in the CI job summary
+- **Reproducibility:** seeded runs with identical results across processes and machines, checked by a dedicated test (containerization planned)
 
 ---
 
@@ -55,8 +55,8 @@ precision and latency are computed and checked against the requirements automati
 ## Tech stack
 
 - **Language:** Python (core), C++ (performance-critical module — planned)
-- **Perception:** camera object detection, radar point processing, sensor fusion
-- **Data:** nuScenes (mini split for development)
+- **Perception:** radar echo clustering, camera–radar fusion with optimal (Hungarian) association; camera detector planned
+- **Data:** seeded synthetic scenarios (current), nuScenes mini split (next)
 - **Testing:** pytest, requirement-based test cases
 - **CI/CD:** GitHub Actions
 - **Architecture modeling:** Capella / SysML (MBSE)
@@ -99,7 +99,7 @@ python -m src.test_harness.runner --seed 42 --frames 300 # validation report -> 
 
 ## Status
 
-First system-level results (synthetic SiL, seed 42, 300 frames):
+Current results (synthetic SiL, seed 42, 300 frames - identical on Linux CI and Windows):
 
 | Requirement | Target | Measured | Verdict |
 |---|---|---|---|
@@ -120,9 +120,35 @@ Not yet covered: sensor ranges (REQ-03, REQ-04) need real data; the camera detec
 is a stub. See the [Traceability Matrix](docs/06_Traceability_Matrix.md) for the
 verification level of each requirement.
 
+## What the validation found
+
+Each defect below was found by the validation pipeline itself, reproduced with a test,
+then fixed in its own commit:
+
+| Finding | How it was found | Fix |
+|---|---|---|
+| Traceability matrix claimed requirements were verified by tests that could not fail | Asked of every test: "would it fail if the requirement were violated?" | Honest verification levels (L1 / L2 / L3) |
+| Synthetic camera frames were different on every run | Same frame requested twice | Seeded per frame index |
+| Metrics ignored classes and depended on list order | Hand-built counter-examples | Class-aware, confidence-ordered matching; scoped, micro-averaged metrics |
+| Precision 0.50: each radar echo became its own object | First SiL run, then a single-car experiment | Radar echo clustering |
+| Fusion depended on list order; fixed 3 m gate split far objects in two (46 % at 75 m) | Order and range experiments | Hungarian association, range-dependent gate |
+| Timestamps documented as checked, but never checked | Fused a detection from another frame | `SynchronizationError` (REQ-12) |
+| Metrics varied slightly between runs and machines | Same seed, different `PYTHONHASHSEED` | Deterministic ordering, cross-process test |
+| Hand-maintained matrix drifted from the code | Automatic comparison with test tags | Matrix checked on every test run |
+
+## Next steps
+
+1. **nuScenes loader (REQ-11):** replay real camera and radar data, with nearest-timestamp
+   matching and ego-motion compensation (camera ~12 Hz, radar ~13 Hz).
+2. **Real camera detector:** pixel boxes projected to metres using nuScenes calibration,
+   which makes REQ-03 testable.
+3. **Metrics per range bin and per class**, and a Docker image for fully reproducible runs.
+
+---
+
 ---
 
 ## Author
 
-**Steve Meka** — B.Eng. Technische Informatik
+**Steve Meka** - B.Eng. Technische Informatik
 [stevkmef.com](https://stevkmef.com)

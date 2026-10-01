@@ -56,8 +56,10 @@ A requirement is only fully verified at L2 or L3. L1 proves the building blocks,
 - **Failing:** none (REQ-09 fixed by radar clustering + fusion v2; margins are small)
 - **Not covered (mandatory):** REQ-03, REQ-04 (need real sensor data)
 
-> Reference metrics come from the CI environment (Linux, Python 3.12). Other platforms may differ
-> slightly (floating-point), e.g. precision 0.496 vs 0.497 on Windows; verdicts are identical.
+> Reference metrics come from the CI run (seed 42, 300 frames). Results are identical across
+> processes and machines (checked by `test_runner_is_reproducible_across_processes`); an earlier
+> difference between Windows and Linux was traced to string-set ordering (PYTHONHASHSEED), not
+> to floating-point, and fixed.
 
 ---
 
@@ -66,5 +68,7 @@ A requirement is only fully verified at L2 or L3. L1 proves the building blocks,
 1. Each requirement has a unique ID in [01_Requirements.md](01_Requirements.md).
 2. Each verifying test is tagged with `@pytest.mark.requirement("REQ-XX")`.
 3. `pytest -m "requirement" -v` reports all requirement-linked tests.
-4. This matrix is updated whenever a requirement or its verification changes.
+4. `tests/test_traceability.py` checks on every run that the test lists in this matrix match
+   the tags in the code, and that every mandatory requirement has a test (known gaps: REQ-03, REQ-04).
+5. Verification levels and statuses need engineering judgment and are updated by hand.
 
