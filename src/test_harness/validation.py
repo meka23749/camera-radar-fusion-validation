@@ -49,6 +49,7 @@ class Validation:
         ground_truth: list[GroundTruthObject],
         classes: set[str] | None = None,
         max_range: float | None = None,
+        ignored: list[GroundTruthObject] | None = None,
     ) -> ValidationResult:
         """Compare detections to ground truth for one frame.
 
@@ -57,6 +58,9 @@ class Validation:
             ground_truth: the true objects (annotations) for the frame.
             classes: if given, only ground-truth objects of these classes are evaluated.
             max_range: if given, only ground-truth objects closer than this (m) are evaluated.
+            ignored: real objects that are NOT evaluated (e.g. invisible to all sensors,
+                or of a class the system does not handle). Missing them is not a
+                false negative, and a detection on them is not a false positive.
         """
         def in_scope(obj) -> bool:
             if classes is not None and obj.object_class not in classes:
@@ -64,7 +68,7 @@ class Validation:
             return max_range is None or math.hypot(obj.x, obj.y) < max_range
 
         scoped_gt = [g for g in ground_truth if in_scope(g)]
-        out_of_scope_gt = [g for g in ground_truth if not in_scope(g)]
+        out_of_scope_gt = [g for g in ground_truth if not in_scope(g)] + list(ignored or [])
 
         matched_gt_indices: set[int] = set()
         true_positives = 0
