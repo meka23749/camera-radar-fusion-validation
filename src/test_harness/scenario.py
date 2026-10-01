@@ -96,7 +96,8 @@ class CameraModel:
                 continue
             cls = o.object_class
             if self._rng.random() < self.p_confusion:
-                cls = str(self._rng.choice([c for c in set(CLASSES) if c != cls]))
+                # sorted(): set order of strings changes between processes (PYTHONHASHSEED)
+                cls = str(self._rng.choice([c for c in sorted(set(CLASSES)) if c != cls]))
             out.append(DetectedObject(
                 object_class=cls,
                 x=o.x + self._rng.normal(0, self.depth_error * r),
