@@ -10,6 +10,22 @@ import numpy as np
 
 IDENTITY = [1.0, 0.0, 0.0, 0.0]
 YAW_180 = [0.0, 0.0, 0.0, 1.0]            # rotation of 180 deg around z
+CAMERA_LOOKING_FORWARD = [0.5, -0.5, 0.5, -0.5]   # camera z axis (optical axis) -> vehicle x axis
+
+# Annotations of sample 1, given in the VEHICLE frame at camera time
+# (the vehicle is at global x = 100 m, so global x = vehicle x + 100).
+# (token, category, x, y, lidar points, radar points, expected result)
+ANNOTATIONS_S1 = [
+    ("a_car",       "vehicle.car",               30.0,   2.0, 50, 3, "car"),
+    ("a_moto",      "vehicle.motorcycle",        15.0,   1.0, 20, 1, "cyclist"),
+    ("a_bus",       "vehicle.bus.rigid",         40.0,  -4.0, 80, 2, "truck"),
+    ("a_child",     "human.pedestrian.child",    12.0,  -2.0, 15, 0, "pedestrian"),
+    ("a_behind",    "vehicle.car",              -10.0,   0.0, 40, 2, "ignored"),   # behind the vehicle
+    ("a_side",      "vehicle.car",               10.0,  20.0, 30, 1, "ignored"),   # outside the FOV
+    ("a_cone",      "movable_object.trafficcone", 20.0,  0.0, 10, 0, "ignored"),   # out-of-scope class
+    ("a_invisible", "vehicle.car",               60.0,  -3.0,  0, 0, "ignored"),   # no sensor point
+    ("a_far",       "vehicle.car",              190.0,   0.0,  2, 1, "ignored"),   # beyond 180 m
+]
 
 RADAR_FIELDS = ("x y z dyn_prop id rcs vx vy vx_comp vy_comp is_quality_valid "
                 "ambig_state x_rms y_rms invalid_state pdh0 vx_rms vy_rms").split()
@@ -60,7 +76,8 @@ def make_dataset(root, ego_shift=1.0, radar_rotation=IDENTITY, radar_offset_us=2
         ],
         "calibrated_sensor": [
             {"token": "cs_cam", "sensor_token": "sensor_cam", "translation": [1.7, 0.0, 1.5],
-             "rotation": IDENTITY},
+             "rotation": CAMERA_LOOKING_FORWARD,
+             "camera_intrinsic": [[1266.0, 0.0, 800.0], [0.0, 1266.0, 450.0], [0.0, 0.0, 1.0]]},
             {"token": "cs_rad", "sensor_token": "sensor_rad", "translation": [3.5, 0.0, 0.5],
              "rotation": radar_rotation},
         ],
@@ -75,7 +92,7 @@ def make_dataset(root, ego_shift=1.0, radar_rotation=IDENTITY, radar_offset_us=2
         "sample_data": [
             {"token": "cam1", "sample_token": "s1", "calibrated_sensor_token": "cs_cam",
              "ego_pose_token": "ep_cam1", "timestamp": t_cam, "is_key_frame": True,
-             "filename": "samples/CAM_FRONT/cam1.jpg"},
+             "filename": "samples/CAM_FRONT/cam1.jpg", "width": 1600, "height": 900},
             {"token": "rad1", "sample_token": "s1", "calibrated_sensor_token": "cs_rad",
              "ego_pose_token": "ep_rad1", "timestamp": t_rad, "is_key_frame": True,
              "filename": "samples/RADAR_FRONT/rad1.pcd"},
@@ -84,12 +101,27 @@ def make_dataset(root, ego_shift=1.0, radar_rotation=IDENTITY, radar_offset_us=2
              "filename": "sweeps/RADAR_FRONT/sweep.pcd"},
             {"token": "cam2", "sample_token": "s2", "calibrated_sensor_token": "cs_cam",
              "ego_pose_token": "ep_cam2", "timestamp": 1_480_000, "is_key_frame": True,
-             "filename": "samples/CAM_FRONT/cam2.jpg"},
+             "filename": "samples/CAM_FRONT/cam2.jpg", "width": 1600, "height": 900},
             {"token": "rad2", "sample_token": "s2", "calibrated_sensor_token": "cs_rad",
              "ego_pose_token": "ep_rad2", "timestamp": 1_500_000, "is_key_frame": True,
              "filename": "samples/RADAR_FRONT/rad2.pcd"},
         ],
     }
+    # annotations: sample 1 as listed above, sample 2 has one car 50 m ahead
+    # (the vehicle is at global x = 105 m at the camera time of sample 2)
+    categories = sorted({a[1] for a in ANNOTATIONS_S1})
+    tables["category"] = [{"token": f"cat_{c}", "name": c} for c in categories]
+    tables["instance"], tables["sample_annotation"] = [], []
+    rows = [("s1", *a[:6], 100.0) for a in ANNOTATIONS_S1] + \
+           [("s2", "a_s2_car", "vehicle.car", 50.0, 0.0, 30, 2, 105.0)]
+    for sample, token, cat, x, y, lidar, radar, ego_x in rows:
+        tables["instance"].append({"token": f"inst_{token}", "category_token": f"cat_{cat}"})
+        tables["sample_annotation"].append({
+            "token": token, "sample_token": sample, "instance_token": f"inst_{token}",
+            "translation": [x + ego_x, y, 1.0], "size": [1.8, 4.5, 1.5], "rotation": IDENTITY,
+            "num_lidar_pts": lidar, "num_radar_pts": radar, "visibility_token": "4",
+        })
+
     # samples listed in the file in REVERSE order: the loader must follow the "next" links
     tables["sample"].reverse()
     for name, records in tables.items():
