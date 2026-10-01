@@ -111,3 +111,26 @@ Nothing is dropped: fusion improves the result, it does not discard information.
 
 The two association changes only work together: a wider gate with greedy matching
 breaks REQ-08 on seed 7 (0.886).
+
+
+---
+
+## Version 3 (tuned on real nuScenes data)
+
+Measured on nuScenes v1.0-mini with the real radar (step 11.5). Tuned on 5 scenes,
+checked once on the 5 other scenes.
+
+| Finding (real data) | Change | Default |
+|---|---|---|
+| ~33 false alarms per frame come from radar clusters no camera detection confirms; 84 % of radar points are static | Unconfirmed radar detections are kept only if they move | `radar_only_min_speed = 5.0` m/s |
+| A circular gate lets clutter BESIDE a car capture the camera detection and move it | Elliptical gate: long along the line of sight (camera depth is poor), narrow across it (camera bearing is precise) | `lateral_gate = 0.75` m, depth 3 m |
+| A gate growing with range admits more clutter along the line of sight | Fixed depth | `gate_per_meter = 0.0` |
+
+**Trade-off decision.** No configuration met REQ-05, REQ-08 and REQ-09 at the same time.
+Configuration A keeps long range (the radar's own capability) at the cost of precision;
+the alternative (never keep unconfirmed radar objects) had better precision but no
+detection beyond 80 m at all, by design. Details and results: `docs/08_Real_Data_Results.md`.
+
+The step-8 configuration (circle 3 m + 0.08 × range, no minimum speed) was tuned on the
+synthetic sensor models and degrades the system on real data. It is kept only as
+`SYNTHETIC_REFERENCE_FUSION` for the synthetic regression bench.

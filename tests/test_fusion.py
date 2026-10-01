@@ -118,12 +118,13 @@ def test_confirmed_static_radar_object_is_kept():
 
 def test_without_minimum_speed_every_radar_object_is_kept():
     static = _rad(40.0, 5.0, vel=0.0)
-    assert len(Fusion().fuse([], [static], 1.0).objects) == 1
+    assert len(Fusion(radar_only_min_speed=None).fuse([], [static], 1.0).objects) == 1
 
 def test_elliptical_gate_rejects_clutter_beside_the_object():
     """A radar cluster 2.5 m BESIDE the car (e.g. a guard rail) is not the car."""
     camera, radar = [_cam("car", 20.0, 0.0)], [_rad(20.0, 2.5)]
-    assert len(Fusion(gate_per_meter=0.0).fuse(camera, radar, 1.0).objects) == 1     # circle: merged
+    assert len(Fusion(gate_per_meter=0.0, lateral_gate=None)
+               .fuse(camera, radar, 1.0).objects) == 1                                 # circle: merged     # circle: merged
     assert len(Fusion(gate_per_meter=0.0, lateral_gate=1.0)
                .fuse(camera, radar, 1.0).objects) == 2                                 # ellipse: kept apart
 
@@ -151,3 +152,4 @@ def test_elliptical_cost_prefers_the_radar_on_the_line_of_sight():
         [_cam("car", 20.0, 0.0)], [_rad(22.5, 0.0), _rad(20.0, 0.9)], 1.0)
     car = next(o for o in result.objects if o.object_class == "car")
     assert (car.x, car.y) == (22.5, 0.0)
+

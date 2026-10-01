@@ -36,10 +36,10 @@ class Fusion:
     def __init__(
         self,
         distance_threshold: float = 3.0,
-        gate_per_meter: float = 0.08,
+        gate_per_meter: float = 0.0,
         max_time_offset: float = 0.05,
-        radar_only_min_speed: float | None = None,
-        lateral_gate: float | None = None,
+        radar_only_min_speed: float | None = 5.0,
+        lateral_gate: float | None = 0.75,
     ):
         """Create the fusion block.
 
