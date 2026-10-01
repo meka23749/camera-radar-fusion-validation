@@ -19,7 +19,7 @@ class RadarPoint:
     """A single radar echo."""
     x: float                    # longitudinal position (distance ahead)
     y: float                    # lateral position (left/right)
-    velocity: float             # relative velocity (Doppler)
+    velocity: float             # longitudinal velocity over ground, m/s (ego-motion compensated)
 
 @dataclass
 class RadarPoints:
