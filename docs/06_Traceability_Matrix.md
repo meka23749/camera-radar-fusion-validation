@@ -1,5 +1,9 @@
 # Requirement ↔ Test Traceability Matrix
 
+> The test lists in this table are checked automatically by `tests/test_traceability.py`:
+> any test tagged with `@pytest.mark.requirement` must appear here, and vice versa.
+> Levels and statuses are maintained by hand.
+
 This matrix links each requirement to the automated test(s) that verify it, and to
 its current status. It mirrors the traceability that tools like **DOORS** (requirements)
 and **XRAY** (test management): every requirement must be covered by at least one test.
@@ -32,15 +36,15 @@ A requirement is only fully verified at L2 or L3. L1 proves the building blocks,
 | REQ-05 | System range / camera-radar fusion | yes | `test_fusion::test_close_camera_and_radar_merge_into_one`, `test_sil_validation::test_far_vehicles_detected_by_fused_system` | L2 | ✅ Verified (synthetic SiL, 3 seeds) |
 | REQ-06 | Output class of each obstacle | yes | `test_validation::test_class_aware_matching_rejects_wrong_class` | L1 | ⚠️ Class-aware metric only (classification not measured yet) |
 | REQ-07 | Proximity warning | optional | - | - | Not implemented |
-| REQ-08 | Recall ≥ 0.90 (vehicles < 30 m) | yes | `test_validation::test_req08_scope_only_counts_vehicles_closer_than_30m`, `test_sil_validation::test_recall_vehicles_below_30m` | L2 | ✅ Verified (synthetic SiL, 0.91-0.92 - small margin, monitor) |
-| REQ-09 | Precision ≥ 0.80 | yes | `test_sil_validation::test_precision` | L2 | ✅ Verified (synthetic SiL, 0.80-0.82 - small margin, monitor) |
+| REQ-08 | Recall ≥ 0.90 (vehicles < 30 m) | yes | `test_validation::test_missed_object_lowers_recall`, `test_validation::test_req08_scope_only_counts_vehicles_closer_than_30m`, `test_sil_validation::test_recall_vehicles_below_30m` | L2 | ✅ Verified (synthetic SiL, 0.91-0.92 - small margin, monitor) |
+| REQ-09 | Precision ≥ 0.80 | yes | `test_validation::test_invented_object_lowers_precision`, `test_output::test_low_confidence_objects_are_removed`, `test_sil_validation::test_precision` | L2 | ✅ Verified (synthetic SiL, 0.80-0.82 - small margin, monitor) |
 | REQ-10 | Latency ≤ 100 ms per frame | yes | `test_sil_validation::test_latency_fusion_stage` | L2 | ⚠️ Fusion stage only (no real detector yet) |
 | REQ-11 | Read nuScenes data | | - | - | ❌ Not implemented (synthetic loader) |
 | REQ-12 | Camera/radar synchronization | | `test_data_loader::test_camera_and_radar_are_synchronized`, `test_camera_perception::test_detections_carry_image_timestamp`, `test_radar_processing::test_detections_carry_frame_timestamp`, `test_fusion::test_detections_from_another_frame_are_rejected` | L1 | ✅ Logic verified |
 | REQ-13 | Structured, machine-readable output | | - | - | ❌ Not covered (no export format) |
-| REQ-14 | Every mandatory requirement has a test | | this matrix | Process | ❌ Not met (REQ-03, 04 uncovered) |
+| REQ-14 | Every mandatory requirement has a test | | `test_traceability::test_matrix_lists_exactly_the_tagged_tests`, `test_traceability::test_every_mandatory_requirement_has_a_test` | Process | ⚠️ Checked automatically; known gaps: REQ-03, REQ-04 |
 | REQ-15 | Tests run in CI/CD | | `.github/workflows/tests.yml` | Process | ✅ Verified |
-| REQ-16 | Reproducible, documented results | | `test_data_loader::test_same_frame_is_reproducible`, `test_sil_validation::test_runner_is_reproducible`, `test_sil_validation::test_runner_is_reproducible_across_processes` | L2 | ✅ Verified (seeded runs, identical across processes, generated report) |
+| REQ-16 | Reproducible, documented results | | `test_data_loader::test_same_frame_is_reproducible`, `test_sil_validation::test_runner_is_reproducible`, `test_sil_validation::test_runner_is_reproducible_across_processes`, `test_sil_validation::test_report_contains_all_verdicts` | L2 | ✅ Verified (seeded runs, identical across processes, generated report) |
 
 ---
 
