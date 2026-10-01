@@ -57,3 +57,14 @@ def test_runner_is_reproducible(tmp_path):
 def test_runner_on_real_data():
     report = run_nuscenes(os.environ["NUSCENES_ROOT"], max_frames=20)
     assert report["metrics"]["recall_overall"]["n"] > 0
+
+def test_scene_split_alternates_sorted_names(tmp_path):
+    from src.test_harness.nuscenes_runner import scene_split
+    split = scene_split(make_dataset(tmp_path))
+    assert split == {"all": ["scene-0001"], "tune": ["scene-0001"], "validate": []}
+
+
+def test_empty_split_is_an_error(tmp_path):
+    """An empty run would report nothing wrong: it must fail loudly instead."""
+    with pytest.raises(ValueError, match="no frames"):
+        run_nuscenes(make_dataset(tmp_path), split="validate")

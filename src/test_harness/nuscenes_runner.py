@@ -66,14 +66,26 @@ def _stat(k: int, n: int) -> dict:
     return {"value": round(k / n, 3) if n else None, "k": k, "n": n,
             "ci95": [round(low, 3), round(high, 3)]}
 
+def scene_split(root, version: str = "v1.0-mini") -> dict[str, list[str]]:
+    """Split the scenes in two halves: one to TUNE parameters, one to VALIDATE them.
+
+    Tuning and validating on the same data would only prove that the parameters
+    fit these scenes. Scenes are sorted by name and alternated, so the split is
+    fixed and reproducible.
+    """
+    meta = Path(root) / version
+    names = sorted(sc["name"] for sc in json.loads((meta / "scene.json").read_text(encoding="utf-8")))
+    return {"all": names, "tune": names[0::2], "validate": names[1::2]}
+
 
 def _in_band(objects, lo, hi, classes=VEHICLES):
     return [o for o in objects if o.object_class in classes and lo <= math.hypot(o.x, o.y) < hi]
 
 
 def run_nuscenes(root, radar_filter: str = "none", seed: int = 42, max_frames: int | None = None,
-                 radar_processing=None, fusion=None, output=None) -> dict:
-    loader = NuScenesLoader(root, radar_filter=radar_filter)
+                 radar_processing=None, fusion=None, output=None, split: str = "all") -> dict:
+    scenes = scene_split(root)[split]
+    loader = NuScenesLoader(root, radar_filter=radar_filter, scenes=scenes)
     ground_truth = NuScenesGroundTruth(root)
     camera = CameraModel(seed=seed)                    # MODELED camera (no detector yet)
     radar_processing = radar_processing or RadarProcessing()
@@ -87,6 +99,8 @@ def run_nuscenes(root, radar_filter: str = "none", seed: int = 42, max_frames: i
     frames = []                                        # (system, radar_only, evaluated gt) per frame
     latencies_ms = []
     n_frames = loader.num_frames() if max_frames is None else min(max_frames, loader.num_frames())
+    if n_frames == 0:
+        raise ValueError(f"split '{split}' contains no frames")
 
     for i in range(n_frames):
         frame = loader.get_frame(i)
@@ -149,7 +163,7 @@ def run_nuscenes(root, radar_filter: str = "none", seed: int = 42, max_frames: i
         "config": {
             "data": "nuScenes v1.0-mini: REAL radar + REAL ground truth, MODELED camera",
             "radar_filter": radar_filter, "seed": seed, "frames": n_frames,
-            "match_threshold_m": MATCH_THRESHOLD,
+            "match_threshold_m": MATCH_THRESHOLD, "split": split, "scenes": scenes,
         },
         "metrics": {
             "precision_overall": _stat(*precision_counts(r_all)),
@@ -190,7 +204,8 @@ def to_markdown(report: dict) -> str:
         "# Semi-real SiL report (nuScenes)", "",
         f"{c['data']}  ",
         f"radar filter `{c['radar_filter']}`, seed {c['seed']}, {c['frames']} frames, "
-        f"match threshold {c['match_threshold_m']} m", "",
+        f"match threshold {c['match_threshold_m']} m, split `{c['split']}` "
+        f"({len(c['scenes'])} scenes)", "",
         "| Metric | Value [95 % CI] (n) |", "|---|---|",
         f"| Precision, all classes | {fmt(m['precision_overall'])} |",
         f"| Recall, all classes | {fmt(m['recall_overall'])} |",
@@ -215,15 +230,16 @@ def main(argv=None) -> int:
     parser.add_argument("--radar-filter", default="none", choices=sorted(RADAR_FILTERS))
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--max-frames", type=int, default=None)
+    parser.add_argument("--split", default="all", choices=["all", "tune", "validate"])
     parser.add_argument("--out", default="reports/nuscenes")
     args = parser.parse_args(argv)
     if not args.root:
         parser.error("set NUSCENES_ROOT or pass --root")
 
-    report = run_nuscenes(args.root, args.radar_filter, args.seed, args.max_frames)
+    report = run_nuscenes(args.root, args.radar_filter, args.seed, args.max_frames, split=args.split)
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
-    name = f"nuscenes_{args.radar_filter}"
+    name = f"nuscenes_{args.split}_{args.radar_filter}"
     (out / f"{name}.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
     (out / f"{name}.md").write_text(to_markdown(report), encoding="utf-8")
     print(to_markdown(report))

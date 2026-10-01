@@ -73,6 +73,7 @@ class NuScenesLoader:
         radar: str = "RADAR_FRONT",
         max_sync_offset: float = 0.100,
         radar_filter: str = "none",
+        scenes: list[str] | None = None,
     ):
         """
         Args:
@@ -81,6 +82,7 @@ class NuScenesLoader:
             camera, radar: sensor channels to use.
             max_sync_offset: max |radar time - camera time| in seconds (REQ-12).
             radar_filter: name of a filter in RADAR_FILTERS.
+            scenes: names of the scenes to use (e.g. ["scene-0061"]); None = all.
         """
         self._root = Path(root)
         self._radar_filter = RADAR_FILTERS[radar_filter]
@@ -103,8 +105,14 @@ class NuScenesLoader:
 
         # samples in chronological order, scene by scene (follow the "next" links)
         samples = {s["token"]: s for s in load("sample")}
+        all_scenes = load("scene")
+        unknown = set(scenes or []) - {sc["name"] for sc in all_scenes}
+        if unknown:
+            raise ValueError(f"unknown scenes: {sorted(unknown)}")
         self._order: list[str] = []
-        for scene in load("scene"):
+        for scene in all_scenes:
+            if scenes is not None and scene["name"] not in scenes:
+                continue
             token = scene["first_sample_token"]
             while token:
                 self._order.append(token)

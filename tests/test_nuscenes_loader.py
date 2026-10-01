@@ -95,3 +95,14 @@ def test_radar_filters(tmp_path, radar_filter, expected_points):
     ]))
     frame = NuScenesLoader(root, radar_filter=radar_filter).get_frame(0)
     assert len(frame.radar.points) == expected_points
+
+def test_scenes_can_be_selected(tmp_path):
+    root = make_dataset(tmp_path)
+    assert NuScenesLoader(root, scenes=["scene-0001"]).num_frames() == 2
+    assert NuScenesLoader(root, scenes=[]).num_frames() == 0
+
+
+def test_unknown_scene_is_rejected(tmp_path):
+    """A typo in a scene name must not silently give an empty (and 'perfect') run."""
+    with pytest.raises(ValueError, match="scene-9999"):
+        NuScenesLoader(make_dataset(tmp_path), scenes=["scene-9999"])
