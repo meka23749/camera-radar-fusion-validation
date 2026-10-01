@@ -61,3 +61,21 @@ def test_output_timestamp_is_set():
     result = Fusion().fuse([], [], timestamp=7.0)
     assert result.timestamp == 7.0
     assert result.objects == []
+
+def test_association_is_globally_optimal_not_greedy():
+    """Greedy matching would leave one camera object unmatched here; optimal matches both."""
+    camera = [_cam("car", x=10.0, y=0.0), _cam("car", x=12.0, y=0.0)]
+    radar = [_rad(x=11.8, y=0.0), _rad(x=8.0, y=0.0)]
+    result = Fusion(distance_threshold=3.0).fuse(camera, radar, timestamp=1.0)
+    assert len(result.objects) == 2
+    assert all(o.object_class == "car" for o in result.objects)
+
+
+def test_result_does_not_depend_on_input_order():
+    """Same detections in another order give the same fused objects."""
+    camera = [_cam("car", 10.0, 0.0), _cam("truck", 12.0, 0.0)]
+    radar = [_rad(11.8, 0.0), _rad(8.0, 0.0)]
+    a = Fusion().fuse(camera, radar, 1.0).objects
+    b = Fusion().fuse(camera[::-1], radar[::-1], 1.0).objects
+    key = lambda o: (o.object_class, o.x)
+    assert sorted(map(key, a)) == sorted(map(key, b))

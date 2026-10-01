@@ -5,11 +5,20 @@ detections that are close in space (same object) and merges them, taking the
 class from the camera and the position/velocity from the radar. Unmatched
 detections from either sensor are kept as-is.
 
-This is a simple first version: association uses a fixed distance threshold.
+Association is GLOBALLY optimal (Hungarian algorithm): among all possible
+camera-radar pairings, it picks the one with the most matches and the smallest
+total distance. Unlike greedy matching, the result does not depend on the
+order of the input lists.
 """
+
+import numpy as np
+from scipy.optimize import linear_sum_assignment
 
 from src.interfaces import DetectedObject, ObstacleList
 from src.geometry import distance
+
+NO_MATCH = 1e9   # cost of a forbidden pairing (farther apart than the gate)
+
 
 class Fusion:
     """Combines camera and radar detections into a single obstacle list."""
@@ -23,6 +32,22 @@ class Fusion:
         """
         self._distance_threshold = distance_threshold
 
+    def _associate(self, camera_detections, radar_detections) -> dict[int, int]:
+        """Return {camera index: radar index} for the optimal set of pairs."""
+        if not camera_detections or not radar_detections:
+            return {}
+
+        # cost[i, j] = distance between camera i and radar j, or NO_MATCH if too far
+        cost = np.full((len(camera_detections), len(radar_detections)), NO_MATCH)
+        for i, cam in enumerate(camera_detections):
+            for j, rad in enumerate(radar_detections):
+                d = distance(cam, rad)
+                if d < self._distance_threshold:
+                    cost[i, j] = d
+
+        rows, cols = linear_sum_assignment(cost)
+        return {int(i): int(j) for i, j in zip(rows, cols) if cost[i, j] < NO_MATCH}
+
     def fuse(
         self,
         camera_detections: list[DetectedObject],
@@ -30,10 +55,6 @@ class Fusion:
         timestamp: float,
     ) -> ObstacleList:
         """Merge camera and radar detections into one ObstacleList.
-
-        Camera detections are matched to nearby radar detections. Matched
-        pairs are merged (class from camera, position/velocity from radar).
-        Unmatched detections from both sensors are kept.
 
         Args:
             camera_detections: objects detected by the camera.
@@ -43,26 +64,13 @@ class Fusion:
         Returns:
             An ObstacleList with the fused obstacles.
         """
+        matches = self._associate(camera_detections, radar_detections)
         fused: list[DetectedObject] = []
-        used_radar_indices: set[int] = set()
 
-        # For each camera detection, find the closest radar detection within threshold
-        for cam in camera_detections:
-            best_index = -1
-            best_distance = self._distance_threshold
-
-            for j, rad in enumerate(radar_detections):
-                if j in used_radar_indices:
-                    continue
-                d = distance(cam, rad)
-                if d < best_distance:
-                    best_distance = d
-                    best_index = j
-
-            if best_index >= 0:
+        for i, cam in enumerate(camera_detections):
+            if i in matches:
                 # Match found: merge camera class with radar position/velocity
-                rad = radar_detections[best_index]
-                used_radar_indices.add(best_index)
+                rad = radar_detections[matches[i]]
                 fused.append(
                     DetectedObject(
                         object_class=cam.object_class,   # class from camera
@@ -77,6 +85,7 @@ class Fusion:
                 # No radar match: keep the camera detection as-is
                 fused.append(cam)
 
+        used_radar_indices = set(matches.values())
         for j, rad in enumerate(radar_detections):
             if j not in used_radar_indices:
                 fused.append(
