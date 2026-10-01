@@ -40,7 +40,7 @@ A requirement is only fully verified at L2 or L3. L1 proves the building blocks,
 | REQ-13 | Structured, machine-readable output | | - | - | ❌ Not covered (no export format) |
 | REQ-14 | Every mandatory requirement has a test | | this matrix | Process | ❌ Not met (REQ-03, 04 uncovered) |
 | REQ-15 | Tests run in CI/CD | | `.github/workflows/tests.yml` | Process | ✅ Verified |
-| REQ-16 | Reproducible, documented results | | `test_data_loader::test_same_frame_is_reproducible`, `test_sil_validation::test_runner_is_reproducible` | L2 | ✅ Verified (seeded runs + generated report) |
+| REQ-16 | Reproducible, documented results | | `test_data_loader::test_same_frame_is_reproducible`, `test_sil_validation::test_runner_is_reproducible`, `test_sil_validation::test_runner_is_reproducible_across_processes` | L2 | ✅ Verified (seeded runs, identical across processes, generated report) |
 
 ---
 
