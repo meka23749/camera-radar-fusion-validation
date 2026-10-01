@@ -128,3 +128,17 @@ def test_detection_of_out_of_scope_object_is_not_a_false_positive():
     ped = DetectedObject("pedestrian", 5.0, 0.0, 0.0, 0.9, 1.0)
     res = Validation().evaluate(ObstacleList([ped], 1.0), truth, classes=VEHICLES, max_range=30.0)
     assert res.false_positives == 0
+
+def test_detection_on_ignored_object_is_not_a_false_positive():
+    """The radar sees a traffic cone: real object, but not judged -> no false alarm."""
+    cone = GroundTruthObject("out_of_scope", 20.0, 0.0, 0.0, 1.0)
+    det = DetectedObject("unknown", 20.3, 0.0, 0.0, 0.5, 1.0)
+    res = Validation().evaluate(ObstacleList([det], 1.0), [], ignored=[cone])
+    assert (res.true_positives, res.false_positives, res.false_negatives) == (0, 0, 0)
+
+
+def test_missing_an_ignored_object_is_not_a_false_negative():
+    """Nothing detected, the only object is invisible to all sensors -> no miss."""
+    invisible = GroundTruthObject("car", 60.0, 0.0, 0.0, 1.0)
+    res = Validation().evaluate(ObstacleList([], 1.0), [], ignored=[invisible])
+    assert res.false_negatives == 0
